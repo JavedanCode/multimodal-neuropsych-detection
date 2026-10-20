@@ -1,0 +1,48 @@
+# ======================================================================
+# E-DAIC depression screening — default experiment configuration
+# All paths are relative to the repository root unless absolute.
+# Local overrides: create configs/local.yaml (gitignored) or pass --config.
+# ======================================================================
+
+seed: 42
+
+paths:
+  # Root of the downloaded E-DAIC release (275 participant *.tar.gz + labels).
+  data_root: data/raw
+  manifest: data/manifests/dataset_manifest.json
+  audit_report: reports/data_audit/audit.md
+  interim: data/interim          # selectively extracted feature files
+  processed: data/processed      # model-ready Parquet tables
+  models: models
+  evaluation: reports/evaluation
+
+labels:
+  # Verified against the official label files (2026-10).
+  id_column: Participant_ID
+  target_column: PHQ_Binary
+  split_files:
+    train: train_split.csv
+    dev: dev_split.csv
+    test: test_split.csv
+  # Columns that must never be used as predictive features in the
+  # primary experiment (identifiers, demographics, questionnaire
+  # answers, alternative targets).
+  forbidden_feature_columns:
+    - Participant_ID
+    - Gender
+    - PHQ_Score
+    - PCL-C (PTSD)
+    - PTSD Severity
+    - PHQ_8NoInterest
+    - PHQ_8Depressed
+    - PHQ_8Sleep
+    - PHQ_8Tired
+    - PHQ_8Appetite
+    - PHQ_8Failure
+    - PHQ_8Concentrating
+    - PHQ_8Moving
+    - PHQ_8Total
+
+inventory:
+  deep_scan: false          # stream-decompress archives to list members (slow)
+  deep_scan_cache: data/manifests/archive_members.json

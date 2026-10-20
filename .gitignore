@@ -1,0 +1,42 @@
+# Environments
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Data — never commit dataset contents, raw recordings, or regenerated tables
+data/raw/
+data/interim/
+data/processed/
+data/manifests/
+*.tar.gz
+*.zip
+*.parquet
+
+# Experiment outputs
+models/
+reports/
+experiments/runs/
+*.pt
+*.ckpt
+*.joblib
+
+# Secrets / local config
+.env
+*.secret
+
+# Editors / OS
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
