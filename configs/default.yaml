@@ -47,3 +47,9 @@ labels:
 inventory:
   deep_scan: false          # stream-decompress archives to list members (slow)
   deep_scan_cache: data/manifests/archive_members.json
+
+# Stage 3: fixed before evaluating any classifier.
+aggregation:
+  chunk_rows: 10000
+  confidence_threshold: 0.8
+  workers: 2

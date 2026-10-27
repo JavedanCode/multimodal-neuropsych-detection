@@ -6,8 +6,8 @@ a provisional method name; novelty and performance have not been established.
 
 ## Current stage
 
-Stage 2 implements dataset inventory, strict label validation, split checks,
-and feature-file/header inspection. Preprocessing and classifiers are not implemented yet.
+Stages 2-3 implement dataset inventory, participant aggregation, and training-fitted
+preprocessing. Classifiers are not implemented yet.
 
 ## Setup
 
@@ -79,3 +79,68 @@ Quality fields are available candidates, not validated reliability measures.
 
 Dependencies have version ranges rather than a lockfile. Final reproducibility
 requires recording/pinning the training environment in a later stage.
+
+
+## Stage 3: participant tables and preprocessing
+
+```powershell
+.\.venv\Scripts\python.exe -m src.dataset.tables --config configs/default.yaml
+```
+
+Run Stage 2 feature inventory first. The builder verifies inventory root and
+archive size/mtime, validates labels/partitions, and reads the selected CSV files
+inside each archive without extracting recordings. It uses two workers and
+10,000-row chunks by default. Successful participant summaries are cached under
+`data/processed/participant_cache/`; settings/schema/archive changes invalidate
+those entries. Do not run concurrent builders targeting the same output directory.
+
+The initial representation uses eGeMAPS only for audio (MFCC is deferred) and
+OpenFace action units, pose, and gaze for facial behavior. Each descriptor yields
+its finite-value mean and population standard deviation. This creates 46 acoustic
+and 98 facial features before training-only column removal. Timestamps, frame
+numbers, confidence, success, and acoustic name fields are not descriptors.
+Numeric coercion failures and infinities become missing measurements. Zero is
+retained as a valid numeric value; it is not assumed to mean missing.
+
+Facial rows must have success=1 and finite confidence in [0,1] at or above the
+configured cutoff (default 0.8). This is a fixed engineering choice, not a validated
+quality threshold, and must not be tuned against test performance. An entirely
+unusable modality remains missing and receives availability=0. Missing required
+files or corrupt inputs stop the build instead of silently excluding participants.
+
+The quality table contains per-modality availability, invalid descriptor-cell
+fraction before filtering, retained-row fraction, and facial mean confidence and
+valid-confidence fraction. Confidence means use all valid confidence values,
+including rejected rows. Audio retained fraction is 1 for nonempty files because
+there is no row filter; invalid cells are handled per descriptor. These are
+label-independent quality candidates, not calibrated reliability estimates.
+
+Outputs in `data/processed/`:
+
+- `features.parquet`: raw participant summaries, indexed by Participant_ID.
+- `quality.parquet`: separate bounded quality indicators with the same index.
+- `labels.parquet`: only PHQ_Binary and official split, indexed by Participant_ID.
+- `train_normalized.parquet`, `dev_normalized.parquet`, `test_normalized.parquet`:
+  descriptor tables transformed using preprocessing fitted on official train only.
+- `preprocessing.json`: training participant IDs, feature order, dropped-column
+  reasons, training medians, means, and scales.
+- `stage3_report.json`: feature/split counts, quality ranges, missingness, and limits.
+
+All fitted decisions use training participants only: drop entirely missing,
+constant, and exactly duplicate columns; fill missing values with training
+medians; standardize using the training mean and population standard deviation.
+Duplicate detection includes the missing-value pattern. Quality is separate and
+is not standardized by this transformer. Index columns are identifiers, never
+predictors. Scores, questionnaire answers, and demographics are not exported into
+these model inputs.
+
+**For cross-validation and HHO, start from `features.parquet` and place
+`ParticipantPreprocessor` inside each fold's sklearn Pipeline. Do not use the
+already normalized official-split tables for cross-validation.** Fit only on the
+training fold. The transformer supports sklearn cloning and preserves names.
+
+This representation aggregates the whole supplied session. It does not align
+acoustic/facial timestamps or isolate interviewee speech from interviewer speech.
+Such changes require a documented protocol and a new cache version. There is one
+row per participant, with no participant crossing the official splits. Label
+semantics remain unresolved and need investigation before classifier experiments.
