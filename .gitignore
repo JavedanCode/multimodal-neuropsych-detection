@@ -24,7 +24,7 @@ data/manifests/
 *.parquet
 
 # Experiment outputs
-models/
+/models/
 reports/
 experiments/runs/
 *.pt

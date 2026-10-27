@@ -6,8 +6,10 @@ a provisional method name; novelty and performance have not been established.
 
 ## Current stage
 
-Stages 2-4 implement dataset inventory, leakage-safe preprocessing, and provisional
-CPU logistic-regression baselines. Adaptive fusion is not implemented yet.
+Stages 2-3 implement dataset inventory, strict ID/target validation, split checks,
+feature-file/header inspection, chunked participant aggregation, and training-fitted
+preprocessing. Stage 4 adds provisional CPU logistic-regression baselines. Stage 5 adds compact neural adaptive fusion without quality inputs.
+Reliability-aware fusion, HHO, and explainability are not implemented yet.
 
 ## Setup
 
@@ -19,8 +21,8 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pytest --basetemp=.pytest_cache/verification --tb=short
 ```
 
-The current checkout was tested with Python 3.12.10. PyTorch is not required
-for this stage; no GPU training is implemented yet.
+The current checkout was tested with Python 3.12.10. PyTorch is optional for
+Stages 2-4 and required for Stage 5. CPU baselines use scikit-learn. Stage 5 supports CUDA or CPU training.
 
 ## Local data
 
@@ -192,5 +194,67 @@ development results and do not show a fusion benefit. No parameters were changed
 in response to these scores. They are not comparable to the reference paper's
 headline scores without reconciling dataset, target, and evaluation protocol.
 
-Stage 5 (adaptive fusion) is not implemented yet. The final held-out test
+Stage 4 does not include adaptive fusion; see Stage 5 below. The final held-out test
 remains reserved for a frozen experimental protocol.
+
+
+## Stage 5: adaptive fusion without explicit quality signals
+
+The [Stage 5 protocol](docs/stage5_protocol.md) fixes the architecture and selection
+rules before evaluation. Separate 16-dimensional acoustic and facial encoders feed
+a two-weight softmax gate. A weighted representation feeds a binary prediction
+head. Quality indicators are not inputs to this baseline. Gate weights are learned
+mixing coefficients, not causal feature attributions or calibrated reliability.
+
+Install the pinned neural dependency in the project virtual environment. For the
+RTX 4050, use the CUDA 12.8 wheel from the official PyTorch index:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install torch==2.7.1 --index-url https://download.pytorch.org/whl/cu128
+.\.venv\Scripts\python.exe -m pytest --basetemp=.pytest_cache/stage5-reproduce --tb=short
+.\.venv\Scripts\python.exe -m src.experiments.adaptive --config configs/default.yaml
+```
+
+For a CPU-only machine, install the same version from
+`https://download.pytorch.org/whl/cpu`. The `neural` optional dependency records the
+version; choose the appropriate wheel index explicitly. These commands install
+software only; they do not download data or pretrained weights.
+
+The runner uses training-only five-fold CV to choose epoch count (50 or 100) and
+weight decay (0.001 or 0.01), with fixed hidden size, dropout and learning rate.
+Every fold fits its own preprocessing and class weight. The official development
+set does not select epochs, parameters, seeds, thresholds or checkpoints. The
+threshold stays at 0.5. All three predeclared seeds are reported; 42 is primary.
+The held-out test is not evaluated. Results remain provisional against the
+unreconciled released PHQ_Binary labels.
+
+Outputs are written to a new ignored `experiments/runs/stage5_<UTC timestamp>/`
+directory: protocol, metrics, CV candidates and participant membership, losses,
+participant-level development predictions and gate weights, timing and peak CUDA
+tensor allocation, source/data hashes, environment details, and `.pt` checkpoints.
+Checkpoints contain model weights and fitted preprocessing state; restore via
+`predict_checkpoint` (loads with `weights_only=True`). The runner verifies restored
+predictions before reporting success. Neural tests are skipped when PyTorch is
+absent; this must not be reported as successful neural validation.
+
+Deterministic settings and seeds are recorded, but exact numerical equivalence
+across hardware or library versions is not guaranteed. Peak CUDA allocation is
+not total process RAM, GPU reservation, or total system GPU use. Full-batch training
+is small here because there is only one feature row per participant.
+
+
+First Stage 5 development results (same data hashes and CV folds as Stage 4):
+
+| Seed | Precision | Recall | F1 | ROC-AUC | Accuracy |
+|---|---:|---:|---:|---:|---:|
+| 42 (primary) | 0.273 | 0.500 | 0.353 | 0.614 | 0.607 |
+| 137 | 0.241 | 0.583 | 0.341 | 0.542 | 0.518 |
+| 2026 | 0.273 | 0.500 | 0.353 | 0.534 | 0.607 |
+
+Across-seed F1 mean is 0.349 with population SD 0.0054. The primary F1 does not
+improve on the audio-only or concatenation logistic baselines. A higher primary
+ROC-AUC does not establish general superiority. A matched neural non-gated ablation
+is still needed to isolate any benefit from gating. All three checkpoints were
+verified; the primary CUDA training run also reproduced weights and predictions
+exactly on this environment. No settings were changed after viewing these results.
+The network has 2,635 parameters. Stage 6 reliability-aware fusion remains pending.

@@ -19,6 +19,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+neural = ["torch==2.7.1"]
 dev = [
     "pytest>=8,<9",
 ]

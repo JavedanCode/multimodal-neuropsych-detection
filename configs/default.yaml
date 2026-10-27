@@ -61,3 +61,15 @@ baselines:
   folds: 5
   c_values: [0.01, 0.1, 1.0]
   class_weights: [null, balanced]
+
+# Stage 5: representation-only adaptive gate; fixed before evaluation.
+adaptive:
+  target_policy: released_binary_provisional
+  seeds: [42, 137, 2026]
+  folds: 5
+  device: auto
+  hidden_dim: 16
+  dropout: 0.2
+  learning_rate: 0.001
+  epochs: [50, 100]
+  weight_decays: [0.001, 0.01]
