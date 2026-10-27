@@ -181,7 +181,7 @@ def test_manifest_and_audit_end_to_end(dataset_root: Path, tmp_path: Path):
         "--out", str(tmp_path / "manifest.json"),
         "--report", str(tmp_path / "audit.md"),
     ])
-    assert rc == 0
+    assert rc == 1  # fixture has labels without matching archives
     manifest = json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["totals"]["n_archives"] == 2
     assert manifest["totals"]["n_labeled_participants"] == 4  # 300, 301, 302, 303

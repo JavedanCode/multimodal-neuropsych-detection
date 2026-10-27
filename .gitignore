@@ -40,3 +40,5 @@ experiments/runs/
 .idea/
 Thumbs.db
 Desktop.ini
+
+configs/local.yaml

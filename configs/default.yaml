@@ -1,7 +1,7 @@
 # ======================================================================
 # E-DAIC depression screening — default experiment configuration
 # All paths are relative to the repository root unless absolute.
-# Local overrides: create configs/local.yaml (gitignored) or pass --config.
+# Local overrides: copy this file to configs/local.yaml (gitignored), then pass --config.
 # ======================================================================
 
 seed: 42
@@ -17,7 +17,7 @@ paths:
   evaluation: reports/evaluation
 
 labels:
-  # Verified against the official label files (2026-10).
+  # Column availability verified locally; target derivation remains unresolved.
   id_column: Participant_ID
   target_column: PHQ_Binary
   split_files:
@@ -28,6 +28,7 @@ labels:
   # primary experiment (identifiers, demographics, questionnaire
   # answers, alternative targets).
   forbidden_feature_columns:
+    - PHQ_Binary
     - Participant_ID
     - Gender
     - PHQ_Score

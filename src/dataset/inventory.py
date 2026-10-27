@@ -38,6 +38,8 @@ from pathlib import Path
 from typing import Any, Iterable
 
 import pandas as pd
+import numpy as np
+import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -158,6 +160,13 @@ def load_split_labels(path: Path) -> tuple[pd.DataFrame, SplitLabels]:
     }
     ws = {k: v for k, v in ws.items() if v}
     ids = pd.to_numeric(ids_raw, errors="coerce")
+    if ids.isna().any() or not np.isfinite(ids).all() or (ids <= 0).any() or (ids % 1 != 0).any() or (ids >= 2**63).any():
+        raise ValueError(f"{path.name}: participant IDs must be finite positive integers")
+    target = pd.to_numeric(df[REQUIRED_TARGET_COLUMN], errors="coerce")
+    if target.isna().any() or not target.isin([0, 1]).all():
+        raise ValueError(f"{path.name}: PHQ_Binary must contain only nonmissing 0 or 1")
+    df[ID_COLUMN] = ids.astype("int64")
+    df[REQUIRED_TARGET_COLUMN] = target.astype("int64")
     duplicate_ids = sorted(int(i) for i in ids[ids.duplicated()].dropna().unique())
     balance = (
         df[REQUIRED_TARGET_COLUMN].astype("Int64").value_counts(dropna=False).sort_index()
@@ -188,7 +197,7 @@ def check_label_consistency(split_frames: dict[str, pd.DataFrame]) -> dict[str, 
         dups = sorted(ids[ids.duplicated()].unique().tolist())
         if dups:
             per_split_dups[name] = dups
-        for i in ids:
+        for i in ids.unique():
             owners.setdefault(int(i), []).append(name)
     overlaps = {str(i): s for i, s in sorted(owners.items()) if len(s) > 1}
     return {"duplicate_ids_within_split": per_split_dups, "ids_in_multiple_splits": overlaps}
@@ -197,8 +206,8 @@ def check_label_consistency(split_frames: dict[str, pd.DataFrame]) -> dict[str, 
 def check_binary_vs_score(df: pd.DataFrame, source: str, examples: int = 5) -> dict[str, Any]:
     """Informational: how often ``PHQ_Binary`` disagrees with ``PHQ_Score >= 10``.
 
-    The E-DAIC ``PHQ_Binary`` label is *not* simply the >=10 PHQ-8 threshold
-    (verified against the released label files). This counter is recorded in
+    Local label files contain discrepancies against the >=10 PHQ-8 threshold.
+    Their cause and the exact target derivation remain unverified. This counter is recorded in
     the audit so the discrepancy is documented rather than silently ignored;
     the label is used exactly as released.
     """
@@ -269,7 +278,7 @@ def inspect_archive(path: Path, size_bytes: int, mtime_utc: str) -> ArchiveMembe
     """
     result = ArchiveMembers(filename=path.name, size_bytes=size_bytes, mtime_utc=mtime_utc)
     try:
-        with tarfile.open(path, "r:gz") as tar:
+        with tarfile.open(path, "r|gz") as tar:
             for member in tar:
                 result.members.append(member.name)
                 if member.isfile():
@@ -535,18 +544,19 @@ def build_parser() -> argparse.ArgumentParser:
         prog="edaic-inventory",
         description="Inventory and audit the local E-DAIC release without extracting it.",
     )
-    parser.add_argument("--root", type=Path, required=True,
+    parser.add_argument("--config", type=Path, help="YAML configuration; relative paths resolve from the repository root.")
+    parser.add_argument("--root", type=Path,
                         help="Directory containing NNN_P.tar.gz archives and label CSVs.")
-    parser.add_argument("--out", type=Path, default=Path("data/manifests/dataset_manifest.json"),
+    parser.add_argument("--out", type=Path, default=None,
                         help="Output path for the JSON manifest.")
-    parser.add_argument("--report", type=Path, default=Path("reports/data_audit/audit.md"),
+    parser.add_argument("--report", type=Path, default=None,
                         help="Output path for the Markdown audit report.")
-    parser.add_argument("--deep", action="store_true",
+    parser.add_argument("--deep", action="store_true", default=None,
                         help="Also list every member inside each .tar.gz (slow; cached).")
     parser.add_argument("--force-deep", action="store_true",
                         help="Ignore the member cache and re-stream all archives.")
     parser.add_argument("--member-cache", type=Path,
-                        default=Path("data/manifests/archive_members.json"),
+                        default=None,
                         help="Cache file for deep-scan member listings.")
     parser.add_argument("-v", "--verbose", action="store_true", help="Debug logging.")
     return parser
@@ -559,7 +569,33 @@ def main(argv: list[str] | None = None) -> int:
         format="%(levelname)s %(name)s: %(message)s",
     )
 
+    project = Path(__file__).resolve().parents[2]
+    config_path = args.config or project / "configs/default.yaml"
+    try:
+        config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+        if not isinstance(config, dict):
+            raise ValueError("Configuration must be a mapping")
+        paths = config.get("paths", {})
+        inventory = config.get("inventory", {})
+        if not isinstance(paths, dict) or not isinstance(inventory, dict):
+            raise ValueError("paths and inventory must be mappings")
+    except (OSError, ValueError, yaml.YAMLError) as exc:
+        logger.error("Cannot load configuration: %s", exc)
+        return 2
+    def configured_path(value: str) -> Path:
+        path = Path(value)
+        return path if path.is_absolute() else project / path
+    args.root = args.root or configured_path(paths.get("data_root", "data/raw"))
+    args.out = args.out or configured_path(paths.get("manifest", "data/manifests/dataset_manifest.json"))
+    args.report = args.report or configured_path(paths.get("audit_report", "reports/data_audit/audit.md"))
+    args.member_cache = args.member_cache or configured_path(inventory.get("deep_scan_cache", "data/manifests/archive_members.json"))
+    args.deep = args.deep if args.deep is not None else inventory.get("deep_scan", False)
     root: Path = args.root
+    # Prevent configured outputs from modifying the source dataset.
+    for output in (args.out, args.report, args.member_cache):
+        if output.resolve().is_relative_to(root.resolve()):
+            logger.error("Output must be outside the raw dataset: %s", output)
+            return 2
     if not root.exists():
         logger.error("Root directory does not exist: %s", root)
         return 2
@@ -597,7 +633,14 @@ def main(argv: list[str] | None = None) -> int:
         t["n_archives"], t["archive_bytes"] / 1024**3,
         t["n_labeled_participants"], t["n_splits"],
     )
-    return 0
+    checks = manifest["cross_checks"]
+    invalid = any(checks.get(key) for key in (
+        "schema_errors", "duplicate_ids_within_split", "ids_in_multiple_splits",
+        "labels_without_archives", "archives_without_labels", "unreadable_archives",
+        "unsafe_archive_members"))
+    invalid = invalid or bool(manifest["duplicate_archive_participant_ids"])
+    invalid = invalid or len(manifest["splits"]) != len(EXPECTED_SPLIT_FILES)
+    return 1 if invalid else 0
 
 
 if __name__ == "__main__":
