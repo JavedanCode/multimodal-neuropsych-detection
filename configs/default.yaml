@@ -53,3 +53,11 @@ aggregation:
   chunk_rows: 10000
   confidence_threshold: 0.8
   workers: 2
+
+# Stage 4 uses released labels provisionally; official test remains unevaluated.
+baselines:
+  target_policy: released_binary_provisional
+  seeds: [42, 137, 2026]  # first is primary; never pick the best seed
+  folds: 5
+  c_values: [0.01, 0.1, 1.0]
+  class_weights: [null, balanced]

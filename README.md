@@ -6,8 +6,8 @@ a provisional method name; novelty and performance have not been established.
 
 ## Current stage
 
-Stages 2-3 implement dataset inventory, participant aggregation, and training-fitted
-preprocessing. Classifiers are not implemented yet.
+Stages 2-4 implement dataset inventory, leakage-safe preprocessing, and provisional
+CPU logistic-regression baselines. Adaptive fusion is not implemented yet.
 
 ## Setup
 
@@ -143,4 +143,54 @@ This representation aggregates the whole supplied session. It does not align
 acoustic/facial timestamps or isolate interviewee speech from interviewer speech.
 Such changes require a documented protocol and a new cache version. There is one
 row per participant, with no participant crossing the official splits. Label
-semantics remain unresolved and need investigation before classifier experiments.
+semantics remain unresolved. Stage 4 is explicitly provisional reproduction of
+the released binary field; confirm the semantics before confirmatory screening claims.
+
+
+## Stage 4: provisional development baselines
+
+Read [the predeclared protocol](docs/stage4_protocol.md) for the label investigation
+and experimental choices. The target is unchanged supplied PHQ_Binary, **not a
+verified PHQ-8 >=10 definition**. The discrepancy is documented, not silently fixed.
+
+```powershell
+.\.venv\Scripts\python.exe -m src.experiments.baselines --config configs/default.yaml
+```
+
+The runner trains audio-only (46 features), facial-only (98), and concatenation
+(144) logistic-regression baselines, plus a training-majority reference. It reads
+raw `features.parquet`, never the already normalized Stage 3 tables. All fitted
+preprocessing and C/class-weight selection occur inside five-fold training-only
+CV. Balanced weights are estimated inside each fold. Selected pipelines are
+refitted on official train; development data is only predicted/scored afterward.
+
+The threshold is fixed at 0.5. Seeds 42, 137, and 2026 are all reported; 42 is
+predeclared as primary. The other seeds vary the selection folds. Their standard
+deviation is not a confidence interval or evidence from independent cohorts.
+No test prediction or evaluation is performed at this stage.
+
+Each run creates a new ignored `experiments/runs/stage4_<UTC timestamp>/` folder
+with protocol, JSON results, complete CV candidate scores and participant folds,
+class counts/confusion matrices, development predictions, comparison and seed
+variability CSVs, timing, environment versions, input/source hashes, and fitted
+pipeline checkpoints. Load joblib checkpoints only from trusted local runs.
+
+The first primary-seed development results were:
+
+| Baseline | Precision | Recall | F1 | ROC-AUC | Accuracy |
+|---|---:|---:|---:|---:|---:|
+| Majority | 0.000 | 0.000 | 0.000 | 0.500 | 0.786 |
+| Audio | 0.290 | 0.750 | 0.419 | 0.574 | 0.554 |
+| Facial | 0.207 | 0.500 | 0.293 | 0.479 | 0.482 |
+| Concatenation | 0.258 | 0.667 | 0.372 | 0.549 | 0.518 |
+
+Development has 44 class-0 and 12 class-1 participants. Majority accuracy is high
+because it predicts class 0 for everyone; positive-class recall and F1 are zero.
+Across the three CV seeds, F1 mean +/- population SD was 0.362 +/- 0.079 (audio),
+0.256 +/- 0.052 (facial), and 0.240 +/- 0.095 (concatenation). These are preliminary
+development results and do not show a fusion benefit. No parameters were changed
+in response to these scores. They are not comparable to the reference paper's
+headline scores without reconciling dataset, target, and evaluation protocol.
+
+Stage 5 (adaptive fusion) is not implemented yet. The final held-out test
+remains reserved for a frozen experimental protocol.
