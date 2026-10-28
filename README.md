@@ -485,3 +485,26 @@ Rich linear SVM at the default cutoff showed a modest improvement in mean F1
 No independent confirmation or model superiority is claimed. These numbers are
 not directly comparable to the previous test scores. All 89 tests passed and all
 195 outer checkpoints were verified. No final model was selected or deployed.
+
+## Label and speech feasibility investigation
+
+The follow-up investigation on 2026-10-29 checked all 275 audio/transcript pairs
+and reconciled the supplied label tables. It trained no models and changed no
+labels or previous predictions. See [findings and sources](docs/label_speech_investigation.md).
+
+```powershell
+.venv\Scripts\python.exe -m src.dataset.label_speech_audit
+.venv\Scripts\python.exe -m pytest --basetemp=.pytest_cache/label-speech-check --tb=short
+```
+
+The 20 binary/score disagreements are repeated in the supplied master labels,
+while all master item sums match the split scores. There is independent published
+corroboration, but no verified official correction notice. Transcripts have
+timestamps but no speaker column. Training transcript intervals cover a median
+60.0% of feature frames; this is not a verified participant-speech percentage.
+Two training files have substantial feature/WAV duration mismatches. Ten training
+WAVs are stereo, but their channels are identical or nearly perfectly correlated,
+so channel-based speaker separation is not established. The train/test interview
+conditions also differ substantially. Validate timing and speaker identity before
+a transcript-covered feature experiment; do not silently shift timestamps or
+relabel participants. All 93 tests pass. Stage 10 remains pending.
