@@ -381,4 +381,37 @@ trajectories replayed exactly from cached mask fitness, selected-mask CV fitness
 was recomputed independently, L1 masks reproduced, and both primary HHO neural
 models reproduced weights and predictions on CUDA. Full convergence histories,
 selected feature names/modalities and timing are saved in the run artifacts.
-Stage 8 explanation and faithfulness work has not started.
+Stage 8 explanation and faithfulness work is complete; see below.
+
+## Stage 8: explanations and faithfulness checks
+
+Explain every frozen Stage 7 model on the development participants:
+
+```powershell
+.venv\Scripts\python.exe -m src.experiments.explain --source-run experiments/runs/stage7_20261028T142146453803Z
+.venv\Scripts\python.exe -m pytest --basetemp=.pytest_cache/stage8-check --tb=short
+```
+
+This uses Integrated Gradients on the positive-class logit with training-mean
+descriptors as the reference. It supports both fusion models, preserves each
+checkpoint's selected feature names and preprocessing, and keeps participant
+quality fixed. No retraining or test evaluation occurs. The explicit source-run
+argument avoids accidentally explaining whichever run happened to finish last.
+See [the protocol](docs/stage8_protocol.md) and [results](docs/stage8_results.md).
+
+Each ignored `experiments/runs/stage8_<UTC timestamp>/` folder includes signed
+participant attribution Parquet files, global feature CSVs, individual readable
+explanations, audio/facial contributions, numerical completeness diagnostics,
+perturbation results, quality-mean replacement sensitivity, ranking stability,
+input/checkpoint/source hashes and a report. Exact names preserve descriptor
+identity: `audio__`/`facial__` identify modality and `__mean`/`__std` identify the
+whole-interview summary. They do not identify moments in the interview or symptoms.
+
+In the completed run, highly ranked features produced greater mean output changes
+than random subsets in all 54 model/fraction comparisons (18 models at 10%, 25%,
+50%). All 1,008 participant-model explanations met the predeclared numerical
+completeness tolerance. However, rankings varied across seeds, particularly with
+HHO; this does not establish stable biomarkers, causality, clinical validity or
+better prediction accuracy. L1 top-10 overlap is inflated by selecting only 11
+features. Quality/adaptive rankings were nearly identical for matched seeds.
+The full suite passed 78 tests. Stages 9 and 10 remain.
