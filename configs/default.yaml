@@ -85,3 +85,22 @@ reliability:
   learning_rate: 0.001
   epochs: [50, 100]
   weight_decays: [0.001, 0.01]
+
+# Stage 7: fixed search budget and fixed downstream training before evaluation.
+feature_selection:
+  target_policy: released_binary_provisional
+  seeds: [42, 137, 2026]
+  device: auto
+  folds: 5
+  population: 8
+  iterations: 8
+  alpha: 0.95
+  beta: 0.05
+  fitness_C: 0.1
+  l1_C: 0.1
+  neural:
+    hidden_dim: 16
+    dropout: 0.2
+    learning_rate: 0.001
+    epochs: 50
+    weight_decay: 0.001

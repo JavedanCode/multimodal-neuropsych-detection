@@ -9,7 +9,7 @@ a provisional method name; novelty and performance have not been established.
 Stages 2-3 implement dataset inventory, strict ID/target validation, split checks,
 feature-file/header inspection, chunked participant aggregation, and training-fitted
 preprocessing. Stage 4 adds provisional CPU logistic-regression baselines. Stage 5 adds compact neural adaptive fusion without quality inputs.
-Stage 6 adds quality-conditioned gating. HHO and explainability are not implemented yet.
+Stage 6 adds quality-conditioned gating. Stage 7 adds Binary HHO and L1 feature-selection comparisons. Explainability is not implemented yet.
 
 ## Setup
 
@@ -319,3 +319,66 @@ primary CUDA training run reproduced weights, losses and predictions exactly.
 Previous Stage 5 checkpoints still reproduce their predictions with the updated
 runner. Input hashes, CV folds and candidate grids matched Stage 5. Stage 7 has
 not started, and the official test remains unevaluated.
+
+
+## Stage 7: Binary HHO and L1 feature-selection comparisons
+
+The [Stage 7 protocol](docs/stage7_protocol.md) specifies the HHO equations and
+binary adaptation, budget, fitness model, leakage safeguards, and limitations.
+The optimizer searches binary subsets of the 144 descriptors, preserving at least
+one usable descriptor from each modality. Quality indicators are not selected.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest --basetemp=.pytest_cache/stage7-reproduce --tb=short
+.\.venv\Scripts\python.exe -m src.experiments.selection --config configs/default.yaml
+```
+
+HHO uses eight agents and eight iterations per seed. Its configurable objective is
+`alpha * (1 - mean_cv_f1) + beta * selected_fraction`, with alpha=0.95, beta=0.05.
+The score comes from five-fold training-only CV of a fixed balanced logistic
+regression (C=0.1). Every mask is preprocessed separately within each fitting fold.
+Identical masks reuse fitness within the run. Invalid masks receive a penalty.
+This small search budget does not establish optimality or algorithmic superiority.
+
+The conventional alternative uses fixed-C L1 logistic regression on training only.
+A modality with no nonzero coefficients receives a reported deterministic fallback
+feature. L1 is not tuned on development data. Its full-training-selected mask is
+not used to claim an unbiased CV score.
+
+For each seed, train adaptive and quality-aware fusion using HHO, L1, and all
+features. Downstream neural settings are fixed (16 hidden units, dropout 0.2,
+50 epochs, AdamW lr=0.001, weight_decay=0.001). There is no second CV search with
+an already selected mask. Future downstream hyperparameter tuning requires
+nesting the selector inside each tuning fold. These matched all-feature controls
+are the relevant comparison; Stage 5/6 used a different epoch-selection protocol.
+
+Each ignored `experiments/runs/stage7_<UTC timestamp>/` folder contains selected
+feature names/modality mappings, binary masks, every unique candidate's fold scores,
+convergence CSVs, optimization branch counts, CV participants, checkpoints,
+development predictions/metrics, source/data hashes and runtime tables. Selection
+is performed once per selector/seed and reused by both fusion types; do not double
+count it when summing costs. HHO surrogate fitness need not transfer to neural
+models. No test evaluation or new target construction occurs.
+
+
+First Stage 7 results (matched fixed-training controls, three seeds):
+
+| Selector | Selected descriptors | Mean development F1 | F1 population SD |
+|---|---|---:|---:|
+| All features | 144 / 144 / 144 | 0.327 | 0.029 |
+| L1 | 11 / 11 / 11 | 0.328 | 0.038 |
+| Binary HHO | 29 / 20 / 80 | 0.318 | 0.106 |
+
+Adaptive and quality-aware models had the same classification metrics in this
+run. L1 retained far fewer descriptors with similar mean F1, but this small result
+does not establish superiority. HHO did not improve mean F1 and varied markedly
+across seeds. HHO selection took 20.65 / 49.84 / 106.35 seconds, versus approximately
+0.14 / 0.45 / 0.47 seconds for L1. Feature reduction did not demonstrate a reduction
+in total computation cost. No settings or seeds were changed to improve results.
+
+All 72 tests passed without warnings. All 18 checkpoints were verified. HHO search
+trajectories replayed exactly from cached mask fitness, selected-mask CV fitness
+was recomputed independently, L1 masks reproduced, and both primary HHO neural
+models reproduced weights and predictions on CUDA. Full convergence histories,
+selected feature names/modalities and timing are saved in the run artifacts.
+Stage 8 explanation and faithfulness work has not started.
