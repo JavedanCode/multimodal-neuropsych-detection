@@ -74,6 +74,10 @@ def train_network(frame: pd.DataFrame, target: pd.Series, parameters: dict, seed
     audio, facial = tensors(frame, device)
     config = {'audio_dim':audio.shape[1], 'facial_dim':facial.shape[1],
               'hidden_dim':parameters['hidden_dim'], 'dropout':parameters['dropout']}
+    if 'fusion_mode' in parameters:
+        if quality is not None:
+            raise ValueError('Fixed fusion ablation does not accept quality inputs')
+        config['fusion_mode'] = parameters['fusion_mode']
     if quality is not None:
         validate_quality(quality,frame.index)
         config['quality_mean']=quality.mean().tolist()

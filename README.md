@@ -414,4 +414,42 @@ completeness tolerance. However, rankings varied across seeds, particularly with
 HHO; this does not establish stable biomarkers, causality, clinical validity or
 better prediction accuracy. L1 top-10 overlap is inflated by selecting only 11
 features. Quality/adaptive rankings were nearly identical for matched seeds.
-The full suite passed 78 tests. Stages 9 and 10 remain.
+The full suite passed 78 tests at Stage 8. Stage 9 is now complete below.
+
+## Stage 9: ablations and provisional final evaluation
+
+The user authorized final evaluation on unchanged released labels. Their meaning
+remains unresolved; no clinical or benchmark-superiority claims follow. The test
+partition has now been evaluated. Earlier stage statements about an unevaluated
+test describe the status at those earlier stages.
+
+New equal-weight controls remove the adaptive gate while preserving the same
+encoders/head initialization and training settings. Nine new controls plus all
+27 existing Stage 4/7 models and a majority reference form the fixed 37-model
+roster. All fit only official training participants. No development+training
+refit or test-based model selection occurred. See [protocol](docs/stage9_protocol.md)
+and [completion results](docs/stage9_results.md).
+
+Install the optional plot dependency, prepare a new frozen run, then evaluate it:
+
+```powershell
+.venv\Scripts\python.exe -m pip install -e ".[plots]"
+.venv\Scripts\python.exe -m src.experiments.final prepare --stage4 experiments/runs/stage4_20261027T154348588155Z --stage7 experiments/runs/stage7_20261028T142146453803Z
+# Replace <new-run> with the directory printed by prepare.
+.venv\Scripts\python.exe -m src.experiments.final evaluate --run experiments/runs/<new-run>
+.venv\Scripts\python.exe -m pytest --basetemp=.pytest_cache/stage9-check --tb=short
+```
+
+Completed run: `experiments/runs/stage9_20261028T180907085552Z`. Its evaluation
+folder contains all metrics, paired ablations, primary-seed bootstrap intervals,
+seed summaries, predictions and PNG/SVG figures. The frozen manifest records
+provenance and historical runtime metadata. Existing evaluations cannot be
+overwritten. Results and restricted participant records remain ignored locally.
+
+Observed test F1 means: audio-only logistic 0.563; all-feature adaptive/quality
+0.538; HHO adaptive/quality 0.474; L1 adaptive/quality 0.468. Quality inputs did not
+change F1; gate effects varied by seed. All primary paired F1 difference intervals
+included zero. The proposed additions did not demonstrate the intended benefit.
+See the full report rather than choosing a favorable seed. All 83 tests passed;
+all 74 metric rows and confusion matrices were independently verified. Stage 10
+is the only remaining stage.
