@@ -9,7 +9,7 @@ a provisional method name; novelty and performance have not been established.
 Stages 2-3 implement dataset inventory, strict ID/target validation, split checks,
 feature-file/header inspection, chunked participant aggregation, and training-fitted
 preprocessing. Stage 4 adds provisional CPU logistic-regression baselines. Stage 5 adds compact neural adaptive fusion without quality inputs.
-Reliability-aware fusion, HHO, and explainability are not implemented yet.
+Stage 6 adds quality-conditioned gating. HHO and explainability are not implemented yet.
 
 ## Setup
 
@@ -257,4 +257,65 @@ ROC-AUC does not establish general superiority. A matched neural non-gated ablat
 is still needed to isolate any benefit from gating. All three checkpoints were
 verified; the primary CUDA training run also reproduced weights and predictions
 exactly on this environment. No settings were changed after viewing these results.
-The network has 2,635 parameters. Stage 6 reliability-aware fusion remains pending.
+The network has 2,635 parameters. Stage 6 adds the explicit quality extension described below.
+
+
+## Stage 6: quality-conditioned fusion
+
+See [the predeclared Stage 6 protocol](docs/stage6_protocol.md). This extends the
+Stage 5 gate with a zero-initialized linear projection of eight approved quality
+indicators. Each indicator is centered using its fitting fold's mean. The existing
+encoders and prediction head receive no quality fields. The quality projection
+adds 64 parameters (2,699 total with the current 144 descriptors).
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest --basetemp=.pytest_cache/stage6-reproduce --tb=short
+.\.venv\Scripts\python.exe -m src.experiments.adaptive --quality-aware --config configs/default.yaml
+```
+
+Without `--quality-aware`, the CLI continues to run Stage 5. Stage 6 reads the
+`reliability` config section and the separate `quality.parquet` table. It rejects
+unexpected fields, nonfinite/out-of-range indicators, misaligned participant IDs,
+and both modalities being unavailable. A missing modality is masked out of both
+the gate and fused representation. This rule is tested synthetically; the current
+corpus does not contain naturally missing modalities.
+
+Only facial retention and confidence vary in the current data. Six constant
+quality indicators become zero after training-only centering and supply no
+observed variation. Thus this experiment primarily tests the two facial-quality
+signals, not general acoustic reliability. Learned weights are not calibrated
+reliability scores, and increasing confidence is not guaranteed to increase a
+modality's gate weight.
+
+Stage 6 preserves Stage 5's selection grid, seeds, folds, fixed 0.5 threshold and
+provisional released-label policy. It uses no development labels or quality values
+to fit preprocessing, quality means, or select settings. Outputs go to a new ignored
+`experiments/runs/stage6_<UTC timestamp>/` directory. Checkpoints include the fixed
+quality schema and training quality means. Pass the aligned raw quality DataFrame
+as `quality=` to `predict_checkpoint` when restoring a Stage 6 model.
+
+All results are development-only. Do not claim a gate benefit without examining
+all seeds and appropriate ablations. HHO, explanation faithfulness, broader
+robustness/ablation studies, and final held-out evaluation remain later stages.
+
+
+First Stage 6 development results:
+
+| Seed | Precision | Recall | F1 | ROC-AUC | Accuracy |
+|---|---:|---:|---:|---:|---:|
+| 42 (primary) | 0.273 | 0.500 | 0.353 | 0.614 | 0.607 |
+| 137 | 0.241 | 0.583 | 0.341 | 0.542 | 0.518 |
+| 2026 | 0.273 | 0.500 | 0.353 | 0.532 | 0.607 |
+
+Mean F1 is 0.349 (population SD 0.0054), unchanged from Stage 5. Mean ROC-AUC
+is 0.5625 versus Stage 5's 0.5631. Quality weights learned nonzero values and
+changed predicted probabilities, but this experiment shows no F1 improvement.
+Six constant indicators had zero learned projection weights; the observed quality
+signal comes from facial confidence and retention. This negative result should
+be retained rather than changing settings to force an improvement.
+
+All 68 tests passed. All three checkpoints reproduced predictions; repeating the
+primary CUDA training run reproduced weights, losses and predictions exactly.
+Previous Stage 5 checkpoints still reproduce their predictions with the updated
+runner. Input hashes, CV folds and candidate grids matched Stage 5. Stage 7 has
+not started, and the official test remains unevaluated.

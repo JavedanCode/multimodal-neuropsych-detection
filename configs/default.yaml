@@ -73,3 +73,15 @@ adaptive:
   learning_rate: 0.001
   epochs: [50, 100]
   weight_decays: [0.001, 0.01]
+
+# Stage 6 keeps Stage 5 search settings; quality is added only to the gate.
+reliability:
+  target_policy: released_binary_provisional
+  seeds: [42, 137, 2026]
+  folds: 5
+  device: auto
+  hidden_dim: 16
+  dropout: 0.2
+  learning_rate: 0.001
+  epochs: [50, 100]
+  weight_decays: [0.001, 0.01]

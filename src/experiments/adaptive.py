@@ -16,6 +16,8 @@ import torch
 from sklearn.model_selection import StratifiedKFold
 import yaml
 from src.models.adaptive import AdaptiveFusion
+from src.models.reliability import ReliabilityFusion
+from src.dataset.quality import QUALITY_COLUMNS, validate_quality
 from src.dataset.preprocessing import ParticipantPreprocessor
 from src.experiments.baselines import load_development_inputs, validate_partition, TARGET_POLICY, sha256
 from src.experiments.metrics import binary_metrics
@@ -63,7 +65,7 @@ def tensors(frame: pd.DataFrame, device: str):
             torch.tensor(frame[facial].to_numpy(), dtype=torch.float32, device=device))
 
 
-def train_network(frame: pd.DataFrame, target: pd.Series, parameters: dict, seed: int, device: str):
+def train_network(frame: pd.DataFrame, target: pd.Series, parameters: dict, seed: int, device: str, quality: pd.DataFrame | None=None):
     if not frame.index.equals(target.index) or set(target.unique()) != {0, 1}:
         raise ValueError('Aligned binary training data with both classes required')
     if parameters['epochs'] < 1 or parameters['learning_rate'] <= 0 or parameters['weight_decay'] < 0:
@@ -72,7 +74,13 @@ def train_network(frame: pd.DataFrame, target: pd.Series, parameters: dict, seed
     audio, facial = tensors(frame, device)
     config = {'audio_dim':audio.shape[1], 'facial_dim':facial.shape[1],
               'hidden_dim':parameters['hidden_dim'], 'dropout':parameters['dropout']}
-    model = AdaptiveFusion(**config).to(device)
+    if quality is not None:
+        validate_quality(quality,frame.index)
+        config['quality_mean']=quality.mean().tolist()
+    model = (ReliabilityFusion(**config) if quality is not None else AdaptiveFusion(**config)).to(device)
+    inputs=(audio,facial)
+    if quality is not None:
+        inputs += (torch.tensor(quality.to_numpy(),dtype=torch.float32,device=device),)
     labels = torch.tensor(target.to_numpy(), dtype=torch.float32, device=device)
     pos_weight = float((target == 0).sum() / (target == 1).sum())
     loss_fn = torch.nn.BCEWithLogitsLoss(pos_weight=torch.tensor(pos_weight,device=device))
@@ -81,7 +89,7 @@ def train_network(frame: pd.DataFrame, target: pd.Series, parameters: dict, seed
     model.train()
     for epoch in range(parameters['epochs']):
         optimizer.zero_grad(set_to_none=True)
-        logits, _ = model(audio,facial)
+        logits, _ = model(*inputs)
         loss = loss_fn(logits,labels)
         if not torch.isfinite(loss):
             raise ValueError('Nonfinite training loss')
@@ -92,10 +100,18 @@ def train_network(frame: pd.DataFrame, target: pd.Series, parameters: dict, seed
     return model, config, history, pos_weight
 
 
-def predict(model: AdaptiveFusion, frame: pd.DataFrame, device: str):
+def predict(model: AdaptiveFusion, frame: pd.DataFrame, device: str, quality: pd.DataFrame | None=None):
     model.eval()
     with torch.no_grad():
-        logits, weights = model(*tensors(frame,device))
+        inputs=tensors(frame,device)
+        if isinstance(model,ReliabilityFusion):
+            if quality is None:
+                raise ValueError('Quality-aware checkpoint requires aligned quality inputs')
+            validate_quality(quality,frame.index)
+            inputs += (torch.tensor(quality.to_numpy(),dtype=torch.float32,device=device),)
+        elif quality is not None:
+            raise ValueError('Stage 5 model does not accept quality inputs')
+        logits, weights = model(*inputs)
         return torch.sigmoid(logits).cpu().numpy(), weights.cpu().numpy()
 
 
@@ -106,9 +122,15 @@ def preprocessing_state(p: ParticipantPreprocessor) -> dict:
 
 
 def fit_adaptive(train: pd.DataFrame, y: pd.Series, dev: pd.DataFrame, dy: pd.Series,
-                 seed: int, folds: int, candidates: list[dict], device: str):
+                 seed: int, folds: int, candidates: list[dict], device: str,
+                 train_quality: pd.DataFrame | None=None, dev_quality: pd.DataFrame | None=None):
     validate_partition(train,y)
     validate_partition(dev,dy)
+    if (train_quality is None) != (dev_quality is None):
+        raise ValueError('Both train and development quality tables are required')
+    if train_quality is not None:
+        validate_quality(train_quality,train.index)
+        validate_quality(dev_quality,dev.index)
     if len(train.index.intersection(dev.index)) or list(train.columns) != list(dev.columns):
         raise ValueError('Overlapping participants or incompatible schemas')
     if folds < 2 or y.nunique() != 2 or y.value_counts().min() < folds or not candidates:
@@ -127,8 +149,10 @@ def fit_adaptive(train: pd.DataFrame, y: pd.Series, dev: pd.DataFrame, dy: pd.Se
     for candidate in candidates:
         scores = []
         for fold, (X_fit,y_fit,X_val,y_val) in enumerate(fold_data):
-            model,_,_,_ = train_network(X_fit,y_fit,candidate,seed+fold+1,device)
-            probability,_ = predict(model,X_val,device)
+            q_fit=train_quality.loc[X_fit.index] if train_quality is not None else None
+            q_val=train_quality.loc[X_val.index] if train_quality is not None else None
+            model,_,_,_ = train_network(X_fit,y_fit,candidate,seed+fold+1,device,q_fit)
+            probability,_ = predict(model,X_val,device,q_val)
             scores.append(binary_metrics(y_val,probability)['f1'])
             del model
         selection.append({'parameters':candidate, 'fold_f1':scores,
@@ -139,16 +163,16 @@ def fit_adaptive(train: pd.DataFrame, y: pd.Series, dev: pd.DataFrame, dy: pd.Se
     X_fit = prep.transform(train)
     synchronize(device)
     refit_started = time.perf_counter()
-    model, config, history, pos_weight = train_network(X_fit,y,best['parameters'],seed,device)
+    model, config, history, pos_weight = train_network(X_fit,y,best['parameters'],seed,device,train_quality)
     synchronize(device)
     refit_seconds = time.perf_counter()-refit_started
     fit_seconds = time.perf_counter()-started
     inference_started = time.perf_counter()
-    probability, weights = predict(model,prep.transform(dev),device)
+    probability, weights = predict(model,prep.transform(dev),device,dev_quality)
     synchronize(device)
     inference_seconds = time.perf_counter()-inference_started
     result = {
-        'experiment':'adaptive_fusion', 'seed':seed, 'target_policy':TARGET_POLICY,
+        'experiment':'reliability_fusion' if train_quality is not None else 'adaptive_fusion', 'seed':seed, 'target_policy':TARGET_POLICY,
         'evaluation_partition':'dev', 'test_evaluated':False, 'device':device,
         'selected_parameters':best['parameters'], 'cv_candidates':selection,
         'selection_cv_mean_f1':best['mean_f1'], 'selection_cv_sd_f1':best['sd_f1'],
@@ -168,16 +192,21 @@ def fit_adaptive(train: pd.DataFrame, y: pd.Series, dev: pd.DataFrame, dy: pd.Se
     checkpoint = {'model_config':config,'state_dict':{k:v.detach().cpu() for k,v in model.state_dict().items()},
                   'preprocessing':preprocessing_state(prep), 'train_participant_ids':list(map(int,train.index)),
                   'seed':seed, 'target_policy':TARGET_POLICY, 'threshold':0.5}
+    if train_quality is not None:
+        checkpoint['quality_columns']=QUALITY_COLUMNS
+        result['quality_columns']=QUALITY_COLUMNS
+        result['constant_training_quality_columns']=[c for c in QUALITY_COLUMNS if train_quality[c].nunique()==1]
     return checkpoint,result,predictions
 
 
-def predict_checkpoint(path: Path, raw: pd.DataFrame, device: str='cpu') -> pd.DataFrame:
+def predict_checkpoint(path: Path, raw: pd.DataFrame, device: str='cpu', quality: pd.DataFrame | None=None) -> pd.DataFrame:
     device = resolve_device(device)
     saved = torch.load(path,map_location='cpu',weights_only=True)
     prep = ParticipantPreprocessor.from_state(saved['preprocessing'])
-    model = AdaptiveFusion(**saved['model_config']).to(device)
+    model_type=ReliabilityFusion if 'quality_mean' in saved['model_config'] else AdaptiveFusion
+    model = model_type(**saved['model_config']).to(device)
     model.load_state_dict(saved['state_dict'])
-    probability,weights = predict(model,prep.transform(raw),device)
+    probability,weights = predict(model,prep.transform(raw),device,quality)
     return pd.DataFrame({'probability_class_1':probability,'audio_weight':weights[:,0],'facial_weight':weights[:,1]},index=raw.index)
 
 
@@ -189,25 +218,36 @@ def run(processed: Path, output: Path, settings: dict, project: Path):
         raise ValueError('Distinct predeclared seeds required')
     device = resolve_device(settings['device'])
     train,y,dev,dy = load_development_inputs(processed)
+    quality_aware=settings.get('quality_inputs',False)
+    train_quality=dev_quality=None
+    if quality_aware:
+        quality=pd.read_parquet(processed/'quality.parquet')
+        labels=pd.read_parquet(processed/'labels.parquet')
+        if not quality.index.is_unique or not quality.index.equals(labels.index) or set(quality.columns)!=set(QUALITY_COLUMNS):
+            raise ValueError('Quality table schema or participant alignment mismatch')
+        train_quality=quality.loc[train.index,QUALITY_COLUMNS]
+        dev_quality=quality.loc[dev.index,QUALITY_COLUMNS]
+        validate_quality(train_quality,train.index)
+        validate_quality(dev_quality,dev.index)
     candidates = [{'hidden_dim':settings['hidden_dim'], 'dropout':settings['dropout'],
         'learning_rate':settings['learning_rate'],'epochs':epochs,'weight_decay':decay}
         for epochs in settings['epochs'] for decay in settings['weight_decays']]
     output.mkdir(parents=True,exist_ok=False)
     protocol = {'settings':settings,'device':device,'threshold':0.5,'primary_seed':seeds[0],
         'selection':'positive-class F1, training-only participant CV; first candidate wins ties',
-        'target_policy':TARGET_POLICY,'test_evaluated':False,'quality_inputs':False,
+        'target_policy':TARGET_POLICY,'test_evaluated':False,'quality_inputs':quality_aware,
         'candidates':candidates,'class_imbalance':'BCE positive weight = negatives/positives in each fitting fold',
         'stopping':'fixed candidate epoch counts selected by train CV; no development early stopping'}
     (output/'protocol.json').write_text(json.dumps(protocol,indent=2),encoding='utf-8')
     results=[]
     for seed in seeds:
         LOG.info('Adaptive fusion on %s, seed %s',device,seed)
-        checkpoint,result,predictions = fit_adaptive(train,y,dev,dy,seed,settings['folds'],candidates,device)
-        name=f'adaptive_seed{seed}'
+        checkpoint,result,predictions = fit_adaptive(train,y,dev,dy,seed,settings['folds'],candidates,device,train_quality,dev_quality)
+        name=f'quality_seed{seed}' if quality_aware else f'adaptive_seed{seed}'
         torch.save(checkpoint,output/f'{name}.pt')
         predictions.to_parquet(output/f'{name}_dev_predictions.parquet')
         (output/f'{name}.json').write_text(json.dumps(result,indent=2,allow_nan=False),encoding='utf-8')
-        restored=predict_checkpoint(output/f'{name}.pt',dev,device)
+        restored=predict_checkpoint(output/f'{name}.pt',dev,device,dev_quality)
         for column in restored:
             np.testing.assert_allclose(restored[column],predictions[column],rtol=1e-6,atol=1e-7)
         result['checkpoint_verified']=True
@@ -219,11 +259,11 @@ def run(processed: Path, output: Path, settings: dict, project: Path):
     report={'protocol':protocol,'results':results,'across_seed_summary':summary,
         'environment':{'python':platform.python_version(),'torch':str(torch.__version__),'cuda_runtime':torch.version.cuda,
             'device':device,'gpu':torch.cuda.get_device_name() if device=='cuda' else None},
-        'input_sha256':{n:sha256(processed/n) for n in ['features.parquet','labels.parquet']},
-        'source_sha256':{str(p.relative_to(project)):sha256(p) for p in [Path(__file__),project/'src/models/adaptive.py',project/'src/dataset/preprocessing.py']},
+        'input_sha256':{n:sha256(processed/n) for n in (['features.parquet','labels.parquet','quality.parquet'] if quality_aware else ['features.parquet','labels.parquet'])},
+        'source_sha256':{str(p.relative_to(project)):sha256(p) for p in [Path(__file__),project/'src/models/adaptive.py',project/'src/dataset/preprocessing.py',project/'src/models/reliability.py',project/'src/dataset/quality.py']},
         'limitations':['Provisional released labels; not a verified PHQ-8 threshold experiment.',
             'Gate weights are learned mixing coefficients, not causal explanations or calibrated reliability.',
-            'No explicit quality inputs; reliability-aware fusion belongs to Stage 6.',
+            ('Quality is label-independent but not calibrated reliability; constant fields supply no observed variation.' if quality_aware else 'No explicit quality inputs; reliability-aware fusion belongs to Stage 6.'),
             'Development is used for iteration; test is unevaluated.',
             'Seed variability is not a confidence interval; same development participants across runs.',
             'Session summaries do not isolate interviewer speech or preserve temporal dynamics.',
@@ -231,7 +271,7 @@ def run(processed: Path, output: Path, settings: dict, project: Path):
     (output/'results.json').write_text(json.dumps(report,indent=2,allow_nan=False),encoding='utf-8')
     table=[{'seed':r['seed'],**{k:r['dev_metrics'][k] for k in ['precision','recall','f1','roc_auc','accuracy']},'features':r['retained_feature_count'],'parameters':r['parameter_count'],'refit_seconds':r['refit_seconds'],'inference_seconds':r['inference_seconds']} for r in results]
     pd.DataFrame(table).to_csv(output/'comparison.csv',index=False)
-    lines=['# Stage 5: provisional adaptive fusion development results','',f'Primary seed: {seeds[0]}. Threshold: 0.5. Device: {device}. Test unevaluated.','',
+    lines=[('# Stage 6: provisional quality-aware fusion results' if quality_aware else '# Stage 5: provisional adaptive fusion development results'),'',f'Primary seed: {seeds[0]}. Threshold: 0.5. Device: {device}. Test unevaluated.','',
         '| Seed | Precision | Recall | F1 | ROC-AUC | Accuracy |','|---|---:|---:|---:|---:|---:|']
     for row in table:
         lines.append('| '+str(row['seed'])+' | '+' | '.join(f"{row[k]:.3f}" for k in ['precision','recall','f1','roc_auc','accuracy'])+' |')
@@ -243,12 +283,15 @@ def run(processed: Path, output: Path, settings: dict, project: Path):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--config',type=Path,default=Path('configs/default.yaml'))
+    parser.add_argument('--quality-aware',action='store_true',help='Run Stage 6 using the reliability config section')
     args=parser.parse_args()
     config=yaml.safe_load(args.config.read_text(encoding='utf-8'))
     project=Path(__file__).resolve().parents[2]
-    output=project/'experiments/runs'/('stage5_'+datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ'))
+    output=project/'experiments/runs'/(('stage6_' if args.quality_aware else 'stage5_')+datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ'))
     logging.basicConfig(level=logging.INFO,format='%(message)s')
-    run(project/config['paths']['processed'],output,config['adaptive'],project)
+    settings=dict(config['reliability'] if args.quality_aware else config['adaptive'])
+    settings['quality_inputs']=args.quality_aware
+    run(project/config['paths']['processed'],output,settings,project)
     LOG.info('Completed: %s',output)
 
 
