@@ -453,3 +453,35 @@ included zero. The proposed additions did not demonstrate the intended benefit.
 See the full report rather than choosing a favorable seed. All 83 tests passed;
 all 74 metric rows and confusion matrices were independently verified. Stage 10
 is the only remaining stage.
+
+## Follow-up audio improvement study
+
+The user requested a bounded audio-focused improvement study after Stage 9.
+This is separate from the pending Stage 10 audit. It uses only the 163 official
+training participants; development/test predictions are not regenerated.
+
+```powershell
+.venv\Scripts\python.exe -m src.dataset.audio_summary
+.venv\Scripts\python.exe -m src.experiments.audio_study
+.venv\Scripts\python.exe -m pytest --basetemp=.pytest_cache/audio-study-check --tb=short
+```
+
+The extractor adds quantiles and temporal-variation summaries to the original
+audio averages, using bounded archive reads and a separate cache. The experiment
+compares logistic regression, linear SVM and RBF SVM, with default versus
+inner-selected cutoffs, in matched five-fold outer/three-fold inner validation
+repeated for three seeds. The exact original baseline recipe is also rerun inside
+the outer folds. Every preprocessing fit and threshold choice stays inside its
+fitting partition. See [protocol](docs/audio_study_protocol.md) and
+[full findings](docs/audio_study_results.md).
+
+Completed run: `experiments/runs/audio_study_20261028T181901228265Z`.
+Richer logistic with a selected cutoff achieved mean nested-CV F1 0.371 versus
+0.324 for the original recipe on the same folds, but mostly by increasing recall
+with many false positives. An always-positive rule has F1 0.370 on this cohort;
+the headline increase alone is not convincing evidence of a useful model.
+Rich linear SVM at the default cutoff showed a modest improvement in mean F1
+(0.342) and mean fold AUC (0.586), with lower recall than the original recipe.
+No independent confirmation or model superiority is claimed. These numbers are
+not directly comparable to the previous test scores. All 89 tests passed and all
+195 outer checkpoints were verified. No final model was selected or deployed.
