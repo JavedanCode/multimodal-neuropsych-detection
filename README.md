@@ -508,3 +508,26 @@ so channel-based speaker separation is not established. The train/test interview
 conditions also differ substantially. Validate timing and speaker identity before
 a transcript-covered feature experiment; do not silently shift timestamps or
 relabel participants. All 93 tests pass. Stage 10 remains pending.
+
+## Transcript coverage and facial fusion pilot
+
+Completed 2026-10-29 after the user requested further improvement. The experiment
+quarantines the two known timing anomalies identically in all conditions and uses
+only 161 official training participants, retaining all 37 released positives.
+It compares full/transcript-covered audio, facial-only, and audio-plus-facial
+summaries using logistic regression and linear SVM in matched nested folds.
+Transcript coverage is not verified participant-only speech.
+
+```powershell
+.venv\Scripts\python.exe -m src.dataset.segmented_audio
+.venv\Scripts\python.exe -m src.experiments.segmentation_study
+```
+
+Transcript filtering hurt mean F1 and AUC. Adding facial features to full audio
+improved balanced accuracy but traded recall for specificity; full-audio/facial
+linear SVM reached mean F1 .371 and balanced accuracy .581. This is not a strong
+or independently confirmed improvement. All 97 tests pass; 150 saved models and
+all 5,796 predictions were checked. No new development/test evaluation, relabeling
+or deployment. See [protocol](docs/segmentation_study_protocol.md) and
+[all results and limitations](docs/segmentation_study_results.md). Stage 10 remains
+pending.
