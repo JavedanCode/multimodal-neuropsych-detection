@@ -531,3 +531,15 @@ all 5,796 predictions were checked. No new development/test evaluation, relabeli
 or deployment. See [protocol](docs/segmentation_study_protocol.md) and
 [all results and limitations](docs/segmentation_study_results.md). Stage 10 remains
 pending.
+
+## Pretrained audio and temporal facial pilot
+
+The 2026-10-29 follow-up tested supplied DenseNet audio embeddings and richer
+OpenFace temporal summaries on the same 161-person training cohort. All 14 fitted
+conditions and two constant references are reported. No candidate passed the
+predeclared improvement rule, so the existing reference remains unchanged.
+This was not a Wav2Vec2, text-encoder or full sequence-model experiment.
+See [protocol](docs/representation_study_protocol.md) and
+[results](docs/representation_study_results.md). All 102 tests pass; all 210 saved
+pipelines and 7,728 predictions were verified, including reproduction of the prior
+controls. No development/test reevaluation or relabeling was performed.
