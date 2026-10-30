@@ -543,3 +543,18 @@ See [protocol](docs/representation_study_protocol.md) and
 [results](docs/representation_study_results.md). All 102 tests pass; all 210 saved
 pipelines and 7,728 predictions were verified, including reproduction of the prior
 controls. No development/test reevaluation or relabeling was performed.
+
+## Frozen Wav2Vec2 pilot
+
+Verified 2026-10-30. A pinned speech encoder extracted 10,282 windows locally on
+the RTX 4050, with 0.780 GiB peak allocated GPU memory. The same 161-person nested
+training comparison tested speech features alone and with facial summaries.
+None passed the predeclared improvement rule. Audio-only logistic F1 increased
+from .326 to .338, but AUC fell from .585 to .529; speech/facial variants did not
+improve their matched controls. The existing reference remains unchanged.
+
+See [protocol](docs/speech_encoder_protocol.md) and
+[complete results](docs/speech_encoder_results.md). All 105 tests pass; all 150
+saved models and 5,796 predictions were checked. Encoder replay reproduced sampled
+embeddings exactly. No recordings were uploaded, no labels changed, and no new
+development/test predictions were generated. Stage 10 remains pending.
