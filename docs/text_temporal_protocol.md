@@ -58,6 +58,17 @@ exploratory screens, not statistical confirmation or clinical performance target
 Preserve all prior results. Compare old controls on matching folds and cohort;
 show prior test results separately. Do not select a model on the inspected test.
 
+Pre-fitting amendment, 2026-10-30: extraction stopped on the first AI facial
+timeline exceeding the WAV duration. The prior facial audit confirms exactly two
+additional participants with absolute facial/WAV endpoint gaps >1 second (5.66
+and 110.953 seconds). Retain the same 161 people, but mask their entire facial
+sequence branch. Do not shift, stretch or clip timestamps. The original static
+facial-summary controls do not require alignment and remain unchanged. All
+temporal/quality/available-modality controls share these masks. The 143 already
+successful caches remain numerically valid and retain their original extractor
+hash; explicitly whitelist that hash, checking all other cache contract fields.
+No classifier had been fitted or evaluated before this amendment.
+
 Label follow-up: check public official documentation; prepare a provider inquiry
 without sending correspondence. Provider confirmation and fresh independent
 validation remain external requirements, not completed by this experiment.

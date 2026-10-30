@@ -14,6 +14,9 @@ from src.dataset.inventory import _is_unsafe_member
 from src.experiments.baselines import sha256
 
 BINS = 32
+# Successful caches from the initial strict version are identical. The amendment
+# only masks previously rejected face sequences; retain their original source hash.
+COMPATIBLE_SOURCE = 'f4db4d9414b8cbb5ea90e0dc37a4da8d56d81b665da9a3b7db60c12ab3396577'
 DISCLOSURE = re.compile(r'\b(phq\s*[- ]?\s*[89]?|questionnaire|diagnos\w*|depression\s+(score|label)|'
                         r'not at all|several days|more than half the days|nearly every day)\b', re.I)
 
@@ -114,6 +117,17 @@ def encode(texts, tokenizer, model):
     return np.stack([vectors[np.asarray(owners) == i].mean(0) for i in range(len(texts))])
 
 
+def facial_bins(frame, columns, duration):
+    times = pd.to_numeric(frame.timestamp, errors='coerce').to_numpy(float)
+    if not len(times) or not np.isfinite(times).all() or (times < 0).any() or (np.diff(times) < 0).any():
+        raise ValueError('Invalid facial timeline')
+    gap = float(times[-1] - duration)
+    if abs(gap) > 1:
+        return np.zeros((BINS, len(columns)), np.float32), np.zeros(BINS, bool), np.zeros(BINS, np.float32), gap
+    valid = (frame.success == 1) & frame.confidence.between(.8, 1)
+    return (*bin_means(frame[columns].to_numpy(float), times, duration, valid), gap)
+
+
 def build(project):
     import torch
     from transformers import AutoModel, AutoTokenizer
@@ -148,7 +162,9 @@ def build(project):
                'archive_size': stat.st_size, 'mtime': stat.st_mtime_ns, 'audit': sha256(audit_file)}
         metadata, target = cache / f'{pid}.json', cache / f'{pid}.npz'
         saved = json.loads(metadata.read_text()) if metadata.exists() else {}
-        if saved.get('key') != key or not target.exists() or saved.get('sha256') != sha256(target):
+        old_key = saved.get('key', {})
+        compatible = old_key.get('source') in [key['source'], COMPATIBLE_SOURCE] and {**old_key, 'source': key['source']} == key
+        if not compatible or not target.exists() or saved.get('sha256') != sha256(target):
             tables, hashes = read_members(archive)
             if hashes['text'] != audit['result']['transcript_sha256'] or hashes['audio'] != audit['result']['egemaps_sha256']:
                 raise ValueError('Transcript/acoustic audit mismatch')
@@ -160,8 +176,9 @@ def build(project):
             audio = tables['audio']
             av, am, aq = bin_means(audio[schemas['audio']['columns']].to_numpy(float), audio.frameTime, duration)
             face = tables['face']
-            valid = (face.success == 1) & face.confidence.between(.8, 1)
-            fv, fm, fq = bin_means(face[schemas['facial']['columns']].to_numpy(float), face.timestamp, duration, valid)
+            fv, fm, fq, gap = facial_bins(face, schemas['facial']['columns'], duration)
+            stats['facial_timing_quarantined'] = abs(gap) > 1
+            stats['facial_end_gap_seconds'] = gap
             np.savez_compressed(target, text=text, audio=av, face=fv, masks=np.stack([tm, am, fm]),
                                 quality=np.stack([tq, aq, fq]), text_mean=embeddings.mean(0))
             saved = {'key': key, 'audit': stats, 'member_hashes': hashes, 'sha256': sha256(target)}
@@ -173,6 +190,7 @@ def build(project):
     np.savez_compressed(out / 'sequences.npz', **{k: np.stack([r[k] for r in arrays]) for k in arrays[0]}, ids=labels.index.to_numpy())
     labels.to_parquet(out / 'labels.parquet')
     manifest = {'partition': 'train', 'source': sha256(Path(__file__)), 'models': model_hashes,
+                'compatible_cache_source': COMPATIBLE_SOURCE,
                 'revision': json.loads((model_dir / 'revision.json').read_text()), 'participants': records,
                 'output_hashes': {n: sha256(out / n) for n in ['sequences.npz', 'labels.parquet']}}
     (out / 'manifest.json').write_text(json.dumps(manifest, indent=2), encoding='utf-8')

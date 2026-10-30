@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import torch
-from src.dataset.text_temporal import safe_rows, bin_means
+from src.dataset.text_temporal import safe_rows, bin_means, facial_bins
 from src.models.text_preprocessing import TextPreprocessor
 from src.models.temporal_fusion import SequenceScaler, TemporalFusion, augment, perturb
 
@@ -40,6 +40,12 @@ def test_fold_preprocessors_ignore_heldout_and_missing_bins():
         a[:, 0] = 1e9
     for transformed in scale.transform(arrays, masks):
         assert (transformed[:, 0] == 0).all()
+
+
+def test_facial_endpoint_mismatch_masks_without_rescaling():
+    frame = pd.DataFrame({'timestamp': [0., 40.], 'success': [1, 1], 'confidence': [1., 1.], 'value': [1., 2.]})
+    x, mask, q, gap = facial_bins(frame, ['value'], 32.)
+    assert gap == 8 and not mask.any() and not x.any() and not q.any()
 
 
 def test_quality_missing_masks_and_blind_ablation():
