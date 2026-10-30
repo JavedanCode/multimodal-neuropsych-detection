@@ -558,3 +558,26 @@ See [protocol](docs/speech_encoder_protocol.md) and
 saved models and 5,796 predictions were checked. Encoder replay reproduced sampled
 embeddings exactly. No recordings were uploaded, no labels changed, and no new
 development/test predictions were generated. Stage 10 remains pending.
+
+## Text, temporal, and reliability follow-up
+
+Verified 2026-10-31 on the same 161-person training cohort and matching folds.
+Screened, locally encoded transcripts provide the first substantial improvement
+in these follow-ups: text-only SVM reaches 52.8% F1 and 79.4% mean fold AUC,
+versus 37.1% F1 and 56.9% AUC for original audio-plus-face SVM. Text-only logistic
+is similar (52.5% F1). Adding original audio/facial features reduces performance
+relative to text alone, although it improves on the old audio/facial controls.
+
+The small temporal model reaches 37.7% F1 versus 35.1% for its pointwise control,
+below the predeclared improvement threshold. Quality-aware temporal fusion
+reaches 36.8% clean F1 and only +0.9 points mean stressed F1 versus ordinary
+temporal fusion, below its +5-point target. Controlled feature corruption uses
+known severity; it is not a validated real-world quality detector.
+
+See the [frozen protocol](docs/text_temporal_protocol.md),
+[full comparison and reproduction commands](docs/text_temporal_results.md), and
+[unsent provider inquiry](docs/label_provider_inquiry.md). All 111 tests pass;
+240 saved classifiers and 18,837 predictions were independently checked. The
+text encoder replay matched exactly. The extra facial timing issue is handled
+by masking two facial sequences, preserving the participant cohort and labels.
+These are training-CV improvements, not new test results. Stage 10 remains pending.
