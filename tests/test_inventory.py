@@ -30,8 +30,12 @@ def make_tar(path: Path, members: dict[str, bytes]) -> None:
 
 
 SPLIT_COLUMNS = [
-    "Participant_ID", "Gender", "PHQ_Binary", "PHQ_Score",
-    "PCL-C (PTSD)", "PTSD Severity",
+    "Participant_ID",
+    "Gender",
+    "PHQ_Binary",
+    "PHQ_Score",
+    "PCL-C (PTSD)",
+    "PTSD Severity",
 ]
 
 
@@ -45,20 +49,53 @@ def dataset_root(tmp_path: Path) -> Path:
     root.mkdir()
     make_tar(root / "300_P.tar.gz", {"300_P/openSMILE_features.csv": b"a,b\n1,2\n"})
     make_tar(root / "301_P.tar.gz", {"301_P/openSMILE_features.csv": b"a,b\n3,4\n"})
-    split_csv(root / "train_split.csv", [
-        {"Participant_ID": 300, "Gender": "male", "PHQ_Binary": 0,
-         "PHQ_Score": 4, "PCL-C (PTSD)": 0, "PTSD Severity": 28},
-        {"Participant_ID": 301, "Gender": "female ", "PHQ_Binary": 1,
-         "PHQ_Score": 22, "PCL-C (PTSD)": 1, "PTSD Severity": 67},
-    ])
-    split_csv(root / "dev_split.csv", [
-        {"Participant_ID": 302, "Gender": "male", "PHQ_Binary": 0,
-         "PHQ_Score": 12, "PCL-C (PTSD)": 0, "PTSD Severity": 33},
-    ])
-    split_csv(root / "test_split.csv", [
-        {"Participant_ID": 303, "Gender": "female", "PHQ_Binary": 1,
-         "PHQ_Score": 10, "PCL-C (PTSD)": 1, "PTSD Severity": 51},
-    ])
+    split_csv(
+        root / "train_split.csv",
+        [
+            {
+                "Participant_ID": 300,
+                "Gender": "male",
+                "PHQ_Binary": 0,
+                "PHQ_Score": 4,
+                "PCL-C (PTSD)": 0,
+                "PTSD Severity": 28,
+            },
+            {
+                "Participant_ID": 301,
+                "Gender": "female ",
+                "PHQ_Binary": 1,
+                "PHQ_Score": 22,
+                "PCL-C (PTSD)": 1,
+                "PTSD Severity": 67,
+            },
+        ],
+    )
+    split_csv(
+        root / "dev_split.csv",
+        [
+            {
+                "Participant_ID": 302,
+                "Gender": "male",
+                "PHQ_Binary": 0,
+                "PHQ_Score": 12,
+                "PCL-C (PTSD)": 0,
+                "PTSD Severity": 33,
+            },
+        ],
+    )
+    split_csv(
+        root / "test_split.csv",
+        [
+            {
+                "Participant_ID": 303,
+                "Gender": "female",
+                "PHQ_Binary": 1,
+                "PHQ_Score": 10,
+                "PCL-C (PTSD)": 1,
+                "PTSD Severity": 51,
+            },
+        ],
+    )
     return root
 
 
@@ -70,8 +107,9 @@ def test_parse_archive_name_valid():
     assert inv.parse_archive_name("718_P.tar.gz") == 718
 
 
-@pytest.mark.parametrize("name", ["300_p.tar.gz", "300.tar.gz", "abc_P.tar.gz",
-                                  "300_P.tgz", "notes.txt"])
+@pytest.mark.parametrize(
+    "name", ["300_p.tar.gz", "300.tar.gz", "abc_P.tar.gz", "300_P.tgz", "notes.txt"]
+)
 def test_parse_archive_name_invalid(name):
     assert inv.parse_archive_name(name) is None
 
@@ -86,9 +124,16 @@ def test_scan_directory_classifies(dataset_root: Path):
 # ----------------------------------------------------------------------
 # Unit: path-traversal safety
 # ----------------------------------------------------------------------
-@pytest.mark.parametrize("name", [
-    "../evil.txt", "a/../../evil", "/abs/path", "C:/windows/x", "..",
-])
+@pytest.mark.parametrize(
+    "name",
+    [
+        "../evil.txt",
+        "a/../../evil",
+        "/abs/path",
+        "C:/windows/x",
+        "..",
+    ],
+)
 def test_unsafe_members_detected(name):
     assert inv._is_unsafe_member(name) is True
 
@@ -132,14 +177,35 @@ def test_load_split_labels_rejects_missing_target(tmp_path: Path):
 
 def test_load_split_labels_reports_balance_duplicates_whitespace(tmp_path: Path):
     p = tmp_path / "train_split.csv"
-    split_csv(p, [
-        {"Participant_ID": 300, "Gender": "male ", "PHQ_Binary": 0,
-         "PHQ_Score": 4, "PCL-C (PTSD)": 0, "PTSD Severity": 28},
-        {"Participant_ID": 301, "Gender": "female", "PHQ_Binary": 1,
-         "PHQ_Score": 22, "PCL-C (PTSD)": 1, "PTSD Severity": None},
-        {"Participant_ID": 301, "Gender": "male", "PHQ_Binary": 0,
-         "PHQ_Score": 3, "PCL-C (PTSD)": 0, "PTSD Severity": 17},
-    ])
+    split_csv(
+        p,
+        [
+            {
+                "Participant_ID": 300,
+                "Gender": "male ",
+                "PHQ_Binary": 0,
+                "PHQ_Score": 4,
+                "PCL-C (PTSD)": 0,
+                "PTSD Severity": 28,
+            },
+            {
+                "Participant_ID": 301,
+                "Gender": "female",
+                "PHQ_Binary": 1,
+                "PHQ_Score": 22,
+                "PCL-C (PTSD)": 1,
+                "PTSD Severity": None,
+            },
+            {
+                "Participant_ID": 301,
+                "Gender": "male",
+                "PHQ_Binary": 0,
+                "PHQ_Score": 3,
+                "PCL-C (PTSD)": 0,
+                "PTSD Severity": 17,
+            },
+        ],
+    )
     df, info = inv.load_split_labels(p)
     assert info.class_balance == {"0": 2, "1": 1}
     assert info.duplicate_ids == [301]
@@ -154,18 +220,22 @@ def test_cross_split_overlap_detection():
         "test_split.csv": pd.DataFrame({inv.ID_COLUMN: [301, 302]}),
     }
     cross = inv.check_label_consistency(frames)
-    assert cross["ids_in_multiple_splits"] == {"301": ["train_split.csv", "test_split.csv"]}
+    assert cross["ids_in_multiple_splits"] == {
+        "301": ["train_split.csv", "test_split.csv"]
+    }
     assert cross["duplicate_ids_within_split"] == {}
 
 
 def test_binary_vs_score_counter():
     # Mirrors real E-DAIC rows: 335 (score 12 -> 0), 352 (score 10 -> 0)
     # disagree with the >=10 rule; a score 4 -> 0 row agrees.
-    df = pd.DataFrame({
-        inv.ID_COLUMN: [1, 2, 3],
-        "PHQ_Binary": [0, 0, 0],
-        "PHQ_Score": [12, 10, 4],
-    })
+    df = pd.DataFrame(
+        {
+            inv.ID_COLUMN: [1, 2, 3],
+            "PHQ_Binary": [0, 0, 0],
+            "PHQ_Score": [12, 10, 4],
+        }
+    )
     chk = inv.check_binary_vs_score(df, "train_split.csv")
     assert chk["n_compared"] == 3
     assert chk["n_mismatch_vs_score_ge_10"] == 2
@@ -176,11 +246,16 @@ def test_binary_vs_score_counter():
 # Integration: manifest, audit, cache
 # ----------------------------------------------------------------------
 def test_manifest_and_audit_end_to_end(dataset_root: Path, tmp_path: Path):
-    rc = inv.main([
-        "--root", str(dataset_root),
-        "--out", str(tmp_path / "manifest.json"),
-        "--report", str(tmp_path / "audit.md"),
-    ])
+    rc = inv.main(
+        [
+            "--root",
+            str(dataset_root),
+            "--out",
+            str(tmp_path / "manifest.json"),
+            "--report",
+            str(tmp_path / "audit.md"),
+        ]
+    )
     assert rc == 1  # fixture has labels without matching archives
     manifest = json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["totals"]["n_archives"] == 2
@@ -213,9 +288,13 @@ def test_deep_scan_cache_reused(dataset_root: Path, tmp_path: Path):
 def test_deep_manifest_contains_members(dataset_root: Path, tmp_path: Path):
     archives, labels = inv.scan_directory(dataset_root)
     results = inv.deep_scan_archives(archives, dataset_root, tmp_path / "c.json")
-    manifest = inv.build_manifest(dataset_root, archives, labels,
-                                  deep=True, deep_results=results)
-    assert "300_P/openSMILE_features.csv" in manifest["archive_contents"]["300_P.tar.gz"]["members"]
+    manifest = inv.build_manifest(
+        dataset_root, archives, labels, deep=True, deep_results=results
+    )
+    assert (
+        "300_P/openSMILE_features.csv"
+        in manifest["archive_contents"]["300_P.tar.gz"]["members"]
+    )
     assert manifest["cross_checks"]["unsafe_archive_members"] == {}
 
 

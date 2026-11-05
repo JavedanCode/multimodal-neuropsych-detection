@@ -1,1 +1,1 @@
-"""Training-only sparse descriptor selection."""
+"""Selection components."""

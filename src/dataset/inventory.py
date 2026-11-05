@@ -117,9 +117,7 @@ def scan_directory(root: Path) -> tuple[list[ArchiveEntry], dict[str, Path]]:
         mtime = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat()
         pid = parse_archive_name(path.name)
         if pid is not None:
-            archives.append(
-                ArchiveEntry(pid, path.name, stat.st_size, mtime)
-            )
+            archives.append(ArchiveEntry(pid, path.name, stat.st_size, mtime))
         elif path.suffix.lower() == ".csv" and path.stem.lower() in {
             s.lower().removesuffix(".csv") for s in EXPECTED_SPLIT_FILES
         } | {"detailed_phq8_labels", "detailed_lables", "metadata_mapped"}:
@@ -130,7 +128,9 @@ def scan_directory(root: Path) -> tuple[list[ArchiveEntry], dict[str, Path]]:
 def find_unlabeled_archives(
     archives: Iterable[ArchiveEntry], labeled_ids: set[int]
 ) -> list[int]:
-    return sorted(a.participant_id for a in archives if a.participant_id not in labeled_ids)
+    return sorted(
+        a.participant_id for a in archives if a.participant_id not in labeled_ids
+    )
 
 
 def find_archives_missing_for_labels(
@@ -151,7 +151,9 @@ def load_split_labels(path: Path) -> tuple[pd.DataFrame, SplitLabels]:
     df = pd.read_csv(path)
     missing = [c for c in (ID_COLUMN, REQUIRED_TARGET_COLUMN) if c not in df.columns]
     if missing:
-        raise ValueError(f"{path.name}: missing required column(s) {missing}; found {list(df.columns)}")
+        raise ValueError(
+            f"{path.name}: missing required column(s) {missing}; found {list(df.columns)}"
+        )
 
     ids_raw = df[ID_COLUMN]
     ws = {
@@ -160,8 +162,16 @@ def load_split_labels(path: Path) -> tuple[pd.DataFrame, SplitLabels]:
     }
     ws = {k: v for k, v in ws.items() if v}
     ids = pd.to_numeric(ids_raw, errors="coerce")
-    if ids.isna().any() or not np.isfinite(ids).all() or (ids <= 0).any() or (ids % 1 != 0).any() or (ids >= 2**63).any():
-        raise ValueError(f"{path.name}: participant IDs must be finite positive integers")
+    if (
+        ids.isna().any()
+        or not np.isfinite(ids).all()
+        or (ids <= 0).any()
+        or (ids % 1 != 0).any()
+        or (ids >= 2**63).any()
+    ):
+        raise ValueError(
+            f"{path.name}: participant IDs must be finite positive integers"
+        )
     target = pd.to_numeric(df[REQUIRED_TARGET_COLUMN], errors="coerce")
     if target.isna().any() or not target.isin([0, 1]).all():
         raise ValueError(f"{path.name}: PHQ_Binary must contain only nonmissing 0 or 1")
@@ -169,7 +179,10 @@ def load_split_labels(path: Path) -> tuple[pd.DataFrame, SplitLabels]:
     df[REQUIRED_TARGET_COLUMN] = target.astype("int64")
     duplicate_ids = sorted(int(i) for i in ids[ids.duplicated()].dropna().unique())
     balance = (
-        df[REQUIRED_TARGET_COLUMN].astype("Int64").value_counts(dropna=False).sort_index()
+        df[REQUIRED_TARGET_COLUMN]
+        .astype("Int64")
+        .value_counts(dropna=False)
+        .sort_index()
     )
     class_balance = {str(k): int(v) for k, v in balance.items()}
     null_counts = {c: int(df[c].isna().sum()) for c in df.columns}
@@ -200,10 +213,15 @@ def check_label_consistency(split_frames: dict[str, pd.DataFrame]) -> dict[str, 
         for i in ids.unique():
             owners.setdefault(int(i), []).append(name)
     overlaps = {str(i): s for i, s in sorted(owners.items()) if len(s) > 1}
-    return {"duplicate_ids_within_split": per_split_dups, "ids_in_multiple_splits": overlaps}
+    return {
+        "duplicate_ids_within_split": per_split_dups,
+        "ids_in_multiple_splits": overlaps,
+    }
 
 
-def check_binary_vs_score(df: pd.DataFrame, source: str, examples: int = 5) -> dict[str, Any]:
+def check_binary_vs_score(
+    df: pd.DataFrame, source: str, examples: int = 5
+) -> dict[str, Any]:
     """Informational: how often ``PHQ_Binary`` disagrees with ``PHQ_Score >= 10``.
 
     Local label files contain discrepancies against the >=10 PHQ-8 threshold.
@@ -234,13 +252,19 @@ def check_binary_vs_score(df: pd.DataFrame, source: str, examples: int = 5) -> d
     }
 
 
-def check_phq8_totals(split_frames: dict[str, pd.DataFrame], phq8_path: Path) -> dict[str, Any]:
+def check_phq8_totals(
+    split_frames: dict[str, pd.DataFrame], phq8_path: Path
+) -> dict[str, Any]:
     """Verify ``Detailed_PHQ8_Labels.PHQ_8Total`` equals ``PHQ_Score`` when merged."""
     if not phq8_path.exists():
         return {"available": False}
     phq8 = pd.read_csv(phq8_path)
     if ID_COLUMN not in phq8.columns or "PHQ_8Total" not in phq8.columns:
-        return {"available": False, "reason": "unexpected schema", "columns": list(phq8.columns)}
+        return {
+            "available": False,
+            "reason": "unexpected schema",
+            "columns": list(phq8.columns),
+        }
     all_splits = pd.concat(split_frames.values(), ignore_index=True)
     if "PHQ_Score" not in all_splits.columns:
         return {"available": False, "reason": "PHQ_Score absent from split files"}
@@ -274,9 +298,11 @@ def inspect_archive(path: Path, size_bytes: int, mtime_utc: str) -> ArchiveMembe
     """List members of a ``.tar.gz`` without extracting anything.
 
     Uses ``tarfile`` in stream mode; decompresses the archive sequentially
-    (expensive — deep scans are cached by the caller).
+    (expensive â€” deep scans are cached by the caller).
     """
-    result = ArchiveMembers(filename=path.name, size_bytes=size_bytes, mtime_utc=mtime_utc)
+    result = ArchiveMembers(
+        filename=path.name, size_bytes=size_bytes, mtime_utc=mtime_utc
+    )
     try:
         with tarfile.open(path, "r|gz") as tar:
             for member in tar:
@@ -330,7 +356,9 @@ def deep_scan_archives(
             results[entry.filename] = ArchiveMembers(**cached)
             continue
         logger.info("Deep scan [%d/%d] %s", idx, n_total, entry.filename)
-        listing = inspect_archive(root / entry.filename, entry.size_bytes, entry.mtime_utc)
+        listing = inspect_archive(
+            root / entry.filename, entry.size_bytes, entry.mtime_utc
+        )
         results[entry.filename] = listing
         cache[entry.filename] = asdict(listing)
         save_member_cache(cache, cache_path)
@@ -382,7 +410,11 @@ def build_manifest(
         (p for n, p in label_files.items() if n.lower() == "detailed_phq8_labels.csv"),
         root / "Detailed_PHQ8_Labels.csv",
     )
-    phq8_check = check_phq8_totals(split_frames, phq8_path) if split_frames else {"available": False}
+    phq8_check = (
+        check_phq8_totals(split_frames, phq8_path)
+        if split_frames
+        else {"available": False}
+    )
     binary_checks = {
         name: check_binary_vs_score(df, name) for name, df in split_frames.items()
     }
@@ -405,7 +437,9 @@ def build_manifest(
         "cross_checks": {
             **cross,
             "archives_without_labels": find_unlabeled_archives(archives, labeled_ids),
-            "labels_without_archives": find_archives_missing_for_labels(archives, labeled_ids),
+            "labels_without_archives": find_archives_missing_for_labels(
+                archives, labeled_ids
+            ),
             "binary_vs_score_ge_10": binary_checks,
             "phq8_total_vs_score": phq8_check,
             "schema_errors": errors,
@@ -437,17 +471,23 @@ def render_audit_markdown(manifest: dict[str, Any]) -> str:
     add("")
     add("## Cohort overview")
     add("")
-    add(f"- Participant archives: **{t['n_archives']}** "
-        f"({t['archive_bytes'] / 1024**3:.2f} GB)")
-    add(f"- Labeled participants: **{t['n_labeled_participants']}** across "
-        f"{t['n_splits']} official splits")
+    add(
+        f"- Participant archives: **{t['n_archives']}** "
+        f"({t['archive_bytes'] / 1024**3:.2f} GB)"
+    )
+    add(
+        f"- Labeled participants: **{t['n_labeled_participants']}** across "
+        f"{t['n_splits']} official splits"
+    )
     add("")
 
     splits = manifest.get("splits", {})
     if splits:
         add("## Splits and class balance (`PHQ_Binary`)")
         add("")
-        add("| Split file | N | Class 0 | Class 1 | Duplicates | Whitespace cells | Null columns |")
+        add(
+            "| Split file | N | Class 0 | Class 1 | Duplicates | Whitespace cells | Null columns |"
+        )
         add("|---|---|---|---|---|---|---|")
         for name, info in sorted(splits.items()):
             bal = info.get("class_balance", {})
@@ -467,13 +507,17 @@ def render_audit_markdown(manifest: dict[str, Any]) -> str:
         ("labels_without_archives", "Labeled participants without archive"),
     ):
         vals = cc.get(key, [])
-        add(f"- {label}: **{len(vals)}**" + (f" — {vals}" if vals else ""))
+        add(f"- {label}: **{len(vals)}**" + (f" â€” {vals}" if vals else ""))
     overlaps = cc.get("ids_in_multiple_splits", {})
-    add(f"- IDs appearing in multiple splits: **{len(overlaps)}**"
-        + (f" — {overlaps}" if overlaps else ""))
+    add(
+        f"- IDs appearing in multiple splits: **{len(overlaps)}**"
+        + (f" â€” {overlaps}" if overlaps else "")
+    )
     if manifest.get("duplicate_archive_participant_ids"):
-        add(f"- Duplicate archive participant IDs: "
-            f"{manifest['duplicate_archive_participant_ids']}")
+        add(
+            f"- Duplicate archive participant IDs: "
+            f"{manifest['duplicate_archive_participant_ids']}"
+        )
     add("")
 
     add("## Label semantics notes")
@@ -482,7 +526,7 @@ def render_audit_markdown(manifest: dict[str, Any]) -> str:
         if chk.get("available"):
             add(
                 f"- `{name}`: {chk['n_mismatch_vs_score_ge_10']}/{chk['n_compared']} "
-                f"rows where `PHQ_Binary != (PHQ_Score >= 10)` — **`PHQ_Binary` is used "
+                f"rows where `PHQ_Binary != (PHQ_Score >= 10)` â€” **`PHQ_Binary` is used "
                 f"as released; it is not recomputed.**"
             )
     phq8 = cc.get("phq8_total_vs_score", {})
@@ -508,18 +552,24 @@ def render_audit_markdown(manifest: dict[str, Any]) -> str:
         add("")
         add(f"- Archives listed: {len(contents)}, total members: {n_members}")
         unsafe = cc.get("unsafe_archive_members", {})
-        add(f"- Archives with unsafe member paths: **{len(unsafe)}**"
-            + (f" — {list(unsafe)}" if unsafe else ""))
+        add(
+            f"- Archives with unsafe member paths: **{len(unsafe)}**"
+            + (f" â€” {list(unsafe)}" if unsafe else "")
+        )
         unreadable = cc.get("unreadable_archives", {})
-        add(f"- Unreadable archives: **{len(unreadable)}**"
-            + (f" — {list(unreadable)}" if unreadable else ""))
+        add(
+            f"- Unreadable archives: **{len(unreadable)}**"
+            + (f" â€” {list(unreadable)}" if unreadable else "")
+        )
         add("")
 
     add("## Exclusions")
     add("")
-    add("- No participants excluded by this tool. Cohort selection (both "
+    add(
+        "- No participants excluded by this tool. Cohort selection (both "
         "modalities present, valid labels) happens at feature-table build "
-        "time (Stage D) and is reported there.")
+        "time (Stage D) and is reported there."
+    )
     add("")
     return "\n".join(lines)
 
@@ -544,20 +594,42 @@ def build_parser() -> argparse.ArgumentParser:
         prog="edaic-inventory",
         description="Inventory and audit the local E-DAIC release without extracting it.",
     )
-    parser.add_argument("--config", type=Path, help="YAML configuration; relative paths resolve from the repository root.")
-    parser.add_argument("--root", type=Path,
-                        help="Directory containing NNN_P.tar.gz archives and label CSVs.")
-    parser.add_argument("--out", type=Path, default=None,
-                        help="Output path for the JSON manifest.")
-    parser.add_argument("--report", type=Path, default=None,
-                        help="Output path for the Markdown audit report.")
-    parser.add_argument("--deep", action="store_true", default=None,
-                        help="Also list every member inside each .tar.gz (slow; cached).")
-    parser.add_argument("--force-deep", action="store_true",
-                        help="Ignore the member cache and re-stream all archives.")
-    parser.add_argument("--member-cache", type=Path,
-                        default=None,
-                        help="Cache file for deep-scan member listings.")
+    parser.add_argument(
+        "--config",
+        type=Path,
+        help="YAML configuration; relative paths resolve from the repository root.",
+    )
+    parser.add_argument(
+        "--root",
+        type=Path,
+        help="Directory containing NNN_P.tar.gz archives and label CSVs.",
+    )
+    parser.add_argument(
+        "--out", type=Path, default=None, help="Output path for the JSON manifest."
+    )
+    parser.add_argument(
+        "--report",
+        type=Path,
+        default=None,
+        help="Output path for the Markdown audit report.",
+    )
+    parser.add_argument(
+        "--deep",
+        action="store_true",
+        default=None,
+        help="Also list every member inside each .tar.gz (slow; cached).",
+    )
+    parser.add_argument(
+        "--force-deep",
+        action="store_true",
+        help="Ignore the member cache and re-stream all archives.",
+    )
+    parser.add_argument(
+        "--member-cache",
+        type=Path,
+        default=None,
+        help="Cache file for deep-scan member listings.",
+    )
     parser.add_argument("-v", "--verbose", action="store_true", help="Debug logging.")
     return parser
 
@@ -582,14 +654,24 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, ValueError, yaml.YAMLError) as exc:
         logger.error("Cannot load configuration: %s", exc)
         return 2
+
     def configured_path(value: str) -> Path:
         path = Path(value)
         return path if path.is_absolute() else project / path
+
     args.root = args.root or configured_path(paths.get("data_root", "data/raw"))
-    args.out = args.out or configured_path(paths.get("manifest", "data/manifests/dataset_manifest.json"))
-    args.report = args.report or configured_path(paths.get("audit_report", "reports/data_audit/audit.md"))
-    args.member_cache = args.member_cache or configured_path(inventory.get("deep_scan_cache", "data/manifests/archive_members.json"))
-    args.deep = args.deep if args.deep is not None else inventory.get("deep_scan", False)
+    args.out = args.out or configured_path(
+        paths.get("manifest", "data/manifests/dataset_manifest.json")
+    )
+    args.report = args.report or configured_path(
+        paths.get("audit_report", "reports/data_audit/audit.md")
+    )
+    args.member_cache = args.member_cache or configured_path(
+        inventory.get("deep_scan_cache", "data/manifests/archive_members.json")
+    )
+    args.deep = (
+        args.deep if args.deep is not None else inventory.get("deep_scan", False)
+    )
     root: Path = args.root
     # Prevent configured outputs from modifying the source dataset.
     for output in (args.out, args.report, args.member_cache):
@@ -607,7 +689,8 @@ def main(argv: list[str] | None = None) -> int:
     if not archives and not label_files:
         logger.error(
             "No participant archives (*.tar.gz) and no label CSVs found in %s. "
-            "Point --root at the downloaded E-DAIC directory.", root,
+            "Point --root at the downloaded E-DAIC directory.",
+            root,
         )
         return 2
     if not archives:
@@ -621,8 +704,9 @@ def main(argv: list[str] | None = None) -> int:
             archives, root, args.member_cache, force=args.force_deep
         )
 
-    manifest = build_manifest(root, archives, label_files, deep=args.deep,
-                              deep_results=deep_results)
+    manifest = build_manifest(
+        root, archives, label_files, deep=args.deep, deep_results=deep_results
+    )
     write_manifest(manifest, args.out)
     write_audit_report(manifest, args.report)
 
@@ -630,14 +714,24 @@ def main(argv: list[str] | None = None) -> int:
     logger.info(
         "Inventory complete: %d archives (%.2f GB), %d labeled participants, "
         "%d splits.",
-        t["n_archives"], t["archive_bytes"] / 1024**3,
-        t["n_labeled_participants"], t["n_splits"],
+        t["n_archives"],
+        t["archive_bytes"] / 1024**3,
+        t["n_labeled_participants"],
+        t["n_splits"],
     )
     checks = manifest["cross_checks"]
-    invalid = any(checks.get(key) for key in (
-        "schema_errors", "duplicate_ids_within_split", "ids_in_multiple_splits",
-        "labels_without_archives", "archives_without_labels", "unreadable_archives",
-        "unsafe_archive_members"))
+    invalid = any(
+        checks.get(key)
+        for key in (
+            "schema_errors",
+            "duplicate_ids_within_split",
+            "ids_in_multiple_splits",
+            "labels_without_archives",
+            "archives_without_labels",
+            "unreadable_archives",
+            "unsafe_archive_members",
+        )
+    )
     invalid = invalid or bool(manifest["duplicate_archive_participant_ids"])
     invalid = invalid or len(manifest["splits"]) != len(EXPECTED_SPLIT_FILES)
     return 1 if invalid else 0

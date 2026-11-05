@@ -1,1 +1,1 @@
-"""Compact multimodal networks."""
+"""Predictive models and fold-fitted preprocessing."""

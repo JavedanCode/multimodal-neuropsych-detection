@@ -1,1 +1,1 @@
-"""Reproducible experiment runners."""
+"""Experiments components."""

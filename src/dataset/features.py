@@ -1,4 +1,5 @@
 """Bounded-memory, read-only feature schema inventory; no feature tables are fitted."""
+
 from __future__ import annotations
 
 import argparse
@@ -40,12 +41,27 @@ def inspect_features(path: Path) -> dict:
                         result["errors"].append(f"Oversized header: {member.name}")
                     else:
                         delimiter = ";" if "opensmile2" in name else ","
-                        columns = [c.strip() for c in next(csv.reader([header.decode("utf-8-sig")], delimiter=delimiter), [])]
-                        record.update(delimiter=delimiter, columns=columns,
-                                      modality="audio" if delimiter == ";" else "facial",
-                                      quality_columns=[c for c in columns if c in ("confidence", "success")])
+                        columns = [
+                            c.strip()
+                            for c in next(
+                                csv.reader(
+                                    [header.decode("utf-8-sig")], delimiter=delimiter
+                                ),
+                                [],
+                            )
+                        ]
+                        record.update(
+                            delimiter=delimiter,
+                            columns=columns,
+                            modality="audio" if delimiter == ";" else "facial",
+                            quality_columns=[
+                                c for c in columns if c in ("confidence", "success")
+                            ],
+                        )
                         if not columns or len(columns) != len(set(columns)):
-                            result["errors"].append(f"Empty or duplicate columns: {member.name}")
+                            result["errors"].append(
+                                f"Empty or duplicate columns: {member.name}"
+                            )
                 result["files"].append(record)
     except (tarfile.TarError, OSError, EOFError, UnicodeError, csv.Error) as exc:
         result["errors"].append(f"{type(exc).__name__}: {exc}")
@@ -66,19 +82,35 @@ def audit_features(root: Path, output: Path) -> dict:
             previous = json.loads(output.read_text(encoding="utf-8"))
         except (ValueError, OSError):
             LOGGER.warning("Ignoring unreadable inventory cache")
-    cached = previous.get("archives", {}) if previous.get("root") == str(root) and previous.get("schema_version") == SCHEMA_VERSION else {}
-    report = {"schema_version": SCHEMA_VERSION, "root": str(root),
-              "scope": "File availability and CSV headers only; no row-level quality or alignment validation",
-              "archives": {}}
+    cached = (
+        previous.get("archives", {})
+        if previous.get("root") == str(root)
+        and previous.get("schema_version") == SCHEMA_VERSION
+        else {}
+    )
+    report = {
+        "schema_version": SCHEMA_VERSION,
+        "root": str(root),
+        "scope": "File availability and CSV headers only; no row-level quality or alignment validation",
+        "archives": {},
+    }
     output.parent.mkdir(parents=True, exist_ok=True)
     for index, entry in enumerate(archives, 1):
         old = cached.get(entry.filename, {})
-        if old.get("size_bytes") == entry.size_bytes and old.get("mtime_utc") == entry.mtime_utc and not old.get("errors"):
+        if (
+            old.get("size_bytes") == entry.size_bytes
+            and old.get("mtime_utc") == entry.mtime_utc
+            and not old.get("errors")
+        ):
             item = old
         else:
             LOGGER.info("Inspecting %d/%d %s", index, len(archives), entry.filename)
             item = inspect_features(root / entry.filename)
-            item.update(participant_id=entry.participant_id, size_bytes=entry.size_bytes, mtime_utc=entry.mtime_utc)
+            item.update(
+                participant_id=entry.participant_id,
+                size_bytes=entry.size_bytes,
+                mtime_utc=entry.mtime_utc,
+            )
         report["archives"][entry.filename] = item
         # Preserve unvisited cache entries for restartability until the final write.
         snapshot = {**report, "archives": {**cached, **report["archives"]}}
@@ -101,26 +133,43 @@ def summarize(report: dict) -> dict:
                 continue
             modalities.add(feature["modality"])
             key = json.dumps([feature["modality"], feature["columns"]])
-            variant = variants.setdefault(key, {"modality": feature["modality"], "columns": feature["columns"], "files": 0})
+            variant = variants.setdefault(
+                key,
+                {
+                    "modality": feature["modality"],
+                    "columns": feature["columns"],
+                    "files": 0,
+                },
+            )
             variant["files"] += 1
         present = {"audio", "facial"}.issubset(modalities)
         both += present
         if not present:
             missing.append(filename)
-    return {"archives": len(report["archives"]), "archives_with_both_header_types": both,
-            "archives_missing_header_types": missing,
-            "archives_with_errors": sum(bool(i["errors"]) for i in report["archives"].values()),
-            "schema_variants": list(variants.values())}
+    return {
+        "archives": len(report["archives"]),
+        "archives_with_both_header_types": both,
+        "archives_missing_header_types": missing,
+        "archives_with_errors": sum(
+            bool(i["errors"]) for i in report["archives"].values()
+        ),
+        "schema_variants": list(variants.values()),
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, required=True)
-    parser.add_argument("--out", type=Path, default=Path("data/manifests/feature_inventory.json"))
+    parser.add_argument(
+        "--out", type=Path, default=Path("data/manifests/feature_inventory.json")
+    )
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     report = audit_features(args.root, args.out)
-    LOGGER.info("Complete: %s", {k: v for k, v in report["summary"].items() if k != "schema_variants"})
+    LOGGER.info(
+        "Complete: %s",
+        {k: v for k, v in report["summary"].items() if k != "schema_variants"},
+    )
     return 1 if report["summary"]["archives_with_errors"] else 0
 
 

@@ -24,10 +24,12 @@ speech = ["torch==2.7.1", "transformers==4.57.1"]
 plots = ["matplotlib==3.11.2"]
 dev = [
     "pytest>=8,<9",
+    "black==26.10.1",
 ]
 
 [project.scripts]
 edaic-inventory = "src.dataset.inventory:main"
+depression-study = "src.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -36,3 +38,7 @@ include = ["src*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
