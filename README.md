@@ -4,6 +4,64 @@ Research implementation for acoustic and facial behavioral features from E-DAIC.
 This is a screening research project, not a clinical diagnostic system. R-SAF is
 a provisional method name; novelty and performance have not been established.
 
+## Matched audio/facial branch audit (2026-11-04)
+
+Aligned and richer facial summaries improve F1 from 33.7% to about 37.5%,
+passing the relative branch screen. Audio revisions and all fusion changes fail
+their screens: original concatenation reaches 37.2% F1, quality neural fusion
+28.3%. The retained text reference remains stronger. All 195 models and 7,245
+predictions were verified, including replay of inner selection and all 45 neural
+fits; all 154 tests pass. See [methods and complete results](docs/branch_audit_v6_results.md).
+
+## Audio/facial primary with text fallback (2026-11-04)
+
+The new bounded comparison keeps text out of primary fusion and invokes it only
+when fixed availability/quality rules require fallback. Plain primary F1 is 29.5%,
+quality primary 33.3%, and fixed-text fallback recovers 55.4% when both auxiliaries
+are absent. Clean quality fallback activates for only 1/161 participants and does
+not improve clean F1. The retained text reference remains stronger at 57.5%; none
+of these policies qualifies for promotion. All 152 tests pass, and 90 saved bundles,
+11,592 predictions and 180 inner candidate vectors were checked. See
+[methods, routing rates and complete results](docs/primary_fallback_v5_results.md).
+
+## Bounded existing-data follow-up (2026-11-04)
+
+The frozen series tested precision thresholds, fixed semantic topic summaries and
+conservative quality fusion on the same v2 folds. Threshold selection reached
+**49.9% precision, 72.1% recall and 58.5% F1**, a modest gain below the predeclared
+promotion target. No candidate passed either improvement screen; the original
+reference remains retained. All 90 bundles and 11,592 predictions were verified,
+including replay of 1,020 inner candidate score vectors. See the
+[complete comparison and uncertainty limits](docs/bounded_v3_results.md).
+
+Human review flagged possible interviewer speech in three of 16 covered clips;
+seven others were uncertain. Full-utterance/context follow-up clips are ready.
+Speaker identity and label provenance remain unresolved. No untouched internal
+holdout remains, and this study does not perform a new dev/test evaluation.
+An authorized [transcript-context review](docs/speaker_inference_v4.md) estimates
+three of the 11 flagged utterances as interviewer speech and eight as participant
+speech, including one weak guess. These provisional annotations support the
+three human interviewer flags but do not label the full dataset.
+
+## Recommended research workflow: v2 remediation
+
+The current v2 path fixes unknown-confidence handling, balances folds jointly by
+label and interview domain, selects neural training duration inside training folds,
+and aligns MPNet/audio/facial features to utterance timestamps. It also supplies
+measured quality proxies and nested cross-fitted fusion. Historical entrypoints
+below remain frozen to reproduce earlier experiments; use the explicit v2
+commands in [the remediation report](docs/pipeline_v2_results.md) for new work.
+
+The matched MPNet SVM reference on the revised folds is **57.5% F1**, with
+**47.3% precision and 73.9% recall**. Revised neural pooling does not improve it.
+The completed aligned quality-aware fusion comparison reaches **53.1% F1** and
+only **+0.28 percentage points** mean missing-input F1 over ordinary fusion, so
+neither improvement screen passes and the text reference remains retained.
+Do not rank this estimate against older folds' 58.1%/58.8% point estimates.
+All 140 tests pass. Released labels remain provisional; the supplied manual does
+not resolve the label discrepancies or establish participant-only transcript speech.
+The local listening worksheet and outstanding validation steps are in the report.
+
 ## Current stage
 
 Stages 2-3 implement dataset inventory, strict ID/target validation, split checks,
@@ -532,6 +590,38 @@ or deployment. See [protocol](docs/segmentation_study_protocol.md) and
 [all results and limitations](docs/segmentation_study_results.md). Stage 10 remains
 pending.
 
+## MPNet undersampling follow-up (2026-11-03)
+
+Training-only random undersampling at 1:1 and 2:1 negative-to-positive ratios,
+including seven-model ensembles, did not beat the existing MPNet reference.
+The procedure selected within training folds reached 55.1% F1 versus 58.1% for
+the reference. Evaluation participants were unchanged. All 122 tests passed;
+105 saved bundles and 3,381 predictions were independently checked. See the
+[complete results](docs/undersampling_results.md). The current research model
+is retained; no new development/test evaluation was performed.
+
+## Precision experiment series (2026-11-03)
+
+Four sequential experiments tested constrained threshold selection, class
+penalties, nonlinear SVM and SVM/logistic agreement. Class penalties reached
+49.2% precision / 58.8% F1; agreement reached 49.3% precision / 58.2% F1, compared
+with the retained reference's 47.8% precision / 58.1% F1. None met the declared
+five-point precision improvement target with recall/F1 safeguards. All 124 tests
+passed; 120 bundles and 3,864 predictions were independently checked. These are
+training-CV selection policies, not newly deployed models or test scores.
+See the [experiment list](docs/precision_protocol.md) and
+[complete comparison](docs/precision_results.md).
+
+## Learned pooling and encoder ensemble (2026-11-03)
+
+Two structural follow-ups did not improve the reference: inner-selected learned
+utterance pooling reached 45.2% F1, and MPNet/MiniLM score blending reached 54.5%,
+versus 58.1% for the retained MPNet SVM. The previous class-penalty experiment's
+58.8% remains the highest observed mean, but its small gain did not qualify for
+promotion. All 129 tests passed; 75 saved bundles and 2,898 predictions were
+checked. See [results, protocols and limitations](docs/representation_followup_results.md).
+No new development/test evaluation or deployment was performed.
+
 ## Pretrained audio and temporal facial pilot
 
 The 2026-10-29 follow-up tested supplied DenseNet audio embeddings and richer
@@ -581,3 +671,24 @@ See the [frozen protocol](docs/text_temporal_protocol.md),
 text encoder replay matched exactly. The extra facial timing issue is handled
 by masking two facial sequences, preserving the participant cohort and labels.
 These are training-CV improvements, not new test results. Stage 10 remains pending.
+
+## Current research reference: MPNet text
+
+Verified 2026-11-02. Screened MPNet text with PCA32 and a linear SVM reaches
+**58.1% F1, 73.9% recall, 75.6% accuracy and 80.4% AUC** on the same 161-person
+training comparison. F1 improves by 5.2 percentage points over the previous
+MiniLM reference, with gains in all three repeats. These are training-CV
+estimates, not new test scores.
+
+Four follow-up studies checked text refinement, lexical features, MPNet and
+compression/threshold choices. Only the original MPNet SVM recipe cleared the
+predeclared improvement screen. Across them, 600 saved model bundles and 23,184
+predictions were independently checked; all 119 tests pass. A separately verified
+checkpoint fitted on all training participants is saved locally for research
+reuse; its refit does not provide another performance estimate.
+
+See the [full comparison and checkpoint details](docs/research_progress_20261102.md).
+The strongest reference is still text-only: reliability-aware fusion has not
+shown its intended advantage. Performance on the small AI-interview subgroup
+remains weaker, and the provisional labels remain unresolved. Stage 10 remains
+pending.
