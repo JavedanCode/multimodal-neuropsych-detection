@@ -140,7 +140,13 @@ def predict(bundle, sets, q, available):
     )
 
 
-def run(project):
+def run(project, preprocessing=False, sparse_fusion=False):
+    if sparse_fusion:
+        from src.training.fusion_study import run as run_sparse
+
+        return run_sparse(project)
+    if preprocessing:
+        return run_preprocessing(project)
     sets, y, q, available = load(project)
     paths = [
         "docs/methods/audio_visual.md",
@@ -344,6 +350,174 @@ def run(project):
         )
     )
     return out
+
+
+def preprocessing_inputs(project):
+    """Keep the facial branch fixed and validate matched waveform feature caches."""
+    sets, labels, _, _ = load(project)
+    directory = project / "data/processed/audio_preprocessing"
+    manifest = json.loads((directory / "manifest.json").read_text())
+    assert manifest["partition"] == "train"
+    assert manifest["participants"] == list(labels.index)
+    assert (
+        sha256(project / "src/dataset/audio_preprocessing.py")
+        == manifest["contract"]["source"]
+    )
+    assert (
+        sha256(project / "src/dataset/audio_decode.py")
+        == manifest["contract"]["decoder"]
+    )
+    assert (
+        sha256(project / "docs/methods/audio_preprocessing.md")
+        == manifest["contract"]["protocol"]
+    )
+    for name, digest in manifest["outputs"].items():
+        assert sha256(directory / name) == digest
+    pd.testing.assert_series_equal(
+        labels, pd.read_parquet(directory / "labels.parquet").PHQ_Binary
+    )
+    for participant, digest in manifest["records"].items():
+        path = directory / "participants" / f"{participant}.json"
+        assert sha256(path) == digest
+        record = json.loads(path.read_text())
+        assert record["key"]["contract"] == manifest["contract"]
+        archive = project / "data/raw" / f"{participant}_P.tar.gz"
+        stat = archive.stat()
+        assert stat.st_size == record["key"]["archive_size"]
+        assert stat.st_mtime_ns == record["key"]["archive_mtime_ns"]
+        assert len({r["samples"] for r in record["audit"].values()}) == 1
+        assert len({r["descriptor_frames"] for r in record["audit"].values()}) == 1
+    facial = sets["original_face"]
+    conditions = {"original_audio": sets["original_audio"], "face_only": facial}
+    conditions["original_concat"] = pd.concat([sets["original_audio"], facial], axis=1)
+    for variant in ["raw", "dc", "highpass"]:
+        audio = pd.read_parquet(directory / f"{variant}.parquet")
+        assert audio.index.equals(labels.index) and audio.shape[1] == 50
+        conditions[f"{variant}_audio"] = audio
+        conditions[f"{variant}_concat"] = pd.concat([audio, facial], axis=1)
+    assert conditions["raw_audio"].columns.equals(conditions["dc_audio"].columns)
+    assert conditions["raw_audio"].columns.equals(conditions["highpass_audio"].columns)
+    return conditions, labels
+
+
+def run_preprocessing(project):
+    """Compare fixed cleanup conditions, changing only the acoustic input."""
+    import subprocess
+    import sys
+    from src.dataset.audio_preprocessing import build
+    from src.dataset.text_inputs import inputs
+
+    _, labels = inputs(project)
+    build(project, labels)
+    conditions, labels = preprocessing_inputs(project)
+    output = (
+        project
+        / "experiments/runs"
+        / (
+            "audio_preprocessing_"
+            + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+        )
+    )
+    (output / "models").mkdir(parents=True)
+    hashes = source_hashes(project)
+    for path in [
+        "data/processed/audio_preprocessing/manifest.json",
+        "data/processed/features.parquet",
+        "data/processed/labels.parquet",
+        "data/processed/aligned_v2/manifest.json",
+    ]:
+        hashes[path] = sha256(project / path)
+    predictions, average_precisions, timings = [], [], []
+    for seed in SEEDS:
+        for fold, (fit, heldout) in enumerate(splits(labels, 5, seed)):
+            logging.info("Preprocessing comparison seed %s fold %s", seed, fold)
+            for name, features in conditions.items():
+                started = time.perf_counter()
+                model = fit_classical(
+                    features.iloc[fit],
+                    labels.iloc[fit],
+                    {"family": "logistic", "C": 0.1},
+                    seed,
+                )
+                scores = model.decision_function(features.iloc[heldout])
+                joblib.dump(model, output / "models" / f"{name}_{seed}_{fold}.joblib")
+                save_predictions(
+                    predictions, name, "clean", seed, fold, labels.iloc[heldout], scores
+                )
+                average_precisions.append(
+                    {
+                        "condition": name,
+                        "seed": seed,
+                        "fold": fold,
+                        "average_precision": average_precision_score(
+                            labels.iloc[heldout], scores
+                        ),
+                    }
+                )
+                timings.append(
+                    {
+                        "condition": name,
+                        "seed": seed,
+                        "fold": fold,
+                        "seconds": time.perf_counter() - started,
+                        "retained_features": len(model["prep"].keep_),
+                    }
+                )
+            for name, value in [("always_negative", -1.0), ("always_positive", 1.0)]:
+                scores = np.full(len(heldout), value)
+                save_predictions(
+                    predictions, name, "clean", seed, fold, labels.iloc[heldout], scores
+                )
+                average_precisions.append(
+                    {
+                        "condition": name,
+                        "seed": seed,
+                        "fold": fold,
+                        "average_precision": average_precision_score(
+                            labels.iloc[heldout], scores
+                        ),
+                    }
+                )
+            audit = {
+                "fit_ids": list(map(int, labels.index[fit])),
+                "heldout_ids": list(map(int, labels.index[heldout])),
+            }
+            (output / f"fold_{seed}_{fold}.json").write_text(
+                json.dumps(audit, indent=2)
+            )
+    frame = pd.DataFrame(predictions)
+    frame.to_parquet(output / "predictions.parquet", index=False)
+    metrics = summarize(frame, output)
+    pd.DataFrame(average_precisions).to_csv(
+        output / "fold_average_precision.csv", index=False
+    )
+    pd.DataFrame(timings).to_csv(output / "timings.csv", index=False)
+    pairs = [
+        (f"{variant}_{mode}", f"raw_{mode}")
+        for variant in ["dc", "highpass"]
+        for mode in ["audio", "concat"]
+    ]
+    pairs += [(f"raw_{mode}", f"original_{mode}") for mode in ["audio", "concat"]]
+    (output / "comparison.json").write_text(
+        json.dumps([paired(metrics, a, b) for a, b in pairs], indent=2)
+    )
+    for path, digest in hashes.items():
+        assert sha256(project / path) == digest, path
+    (output / "environment.txt").write_text(
+        subprocess.check_output([sys.executable, "-m", "pip", "freeze"], text=True)
+    )
+    manifest = {
+        "study": "audio_preprocessing",
+        "hashes": hashes,
+        "models": {p.name: sha256(p) for p in (output / "models").glob("*.joblib")},
+        "feature_counts": {
+            name: len(features.columns) for name, features in conditions.items()
+        },
+        "test_evaluated": False,
+        "development_evaluated": False,
+    }
+    (output / "manifest.json").write_text(json.dumps(manifest, indent=2))
+    return output
 
 
 if __name__ == "__main__":

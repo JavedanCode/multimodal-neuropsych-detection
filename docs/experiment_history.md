@@ -2349,3 +2349,58 @@ Existing AI-domain and label-definition limitations remain unresolved.
 .venv\Scripts\python.exe -m src.experiments.verify_undersampling experiments/runs/undersampling_20261103T113703489563Z
 .venv\Scripts\python.exe -m pytest --basetemp=.pytest_cache/undersampling_full --tb=short
 ```
+
+---
+
+## Matched waveform preprocessing — 2026-11-08
+
+Run: `audio_preprocessing_20261108T154755587738Z`. [Frozen protocol](methods/audio_preprocessing.md).
+
+**Decision: retain the original supplied acoustic features.** Neither offset removal nor gentle high-pass filtering passes the predeclared improvement screen. The best historical audio/facial control is unchanged.
+
+The study processed 43.47 hours of recordings from the same 161 retained training participants (37 positive labels). Every waveform was evaluated untreated, with its constant offset removed, and with offset removal plus a second-order 50 Hz forward/backward Butterworth filter. Duration and pauses were preserved; there was no amplitude normalization, speaker inference, speech trimming or noise-estimation denoiser.
+
+openSMILE Python 2.6.0 extracted eGeMAPSv02 low-level descriptors for every condition. Means and population standard deviations yielded 50 audio features. Original supplied features have 46 dimensions and come from a different extractor release; the re-extracted untreated condition is therefore the proper control for cleanup effects. Facial features were held fixed at the original 98 descriptors with the existing two timing quarantines.
+
+Every model used fold-fitted median imputation, constant/duplicate removal, scaling and balanced logistic regression C=.1 at threshold zero. Five participant folds balanced by domain/label were repeated with seeds 42, 137 and 2026. No hyperparameter or threshold tuning, development/test evaluation, or text predictors were introduced. Audio-only original-feature scores use this fixed classifier, unlike the earlier independently selected audio-only branch.
+
+All classification percentages below are means of repeat-level out-of-fold metrics. AUC/AP are means over 15 folds on a 0–1 scale.
+
+| Condition | Accuracy | Balanced accuracy | Precision | Recall | F1 | AUC | AP |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| always_negative | 77.02 | 50.00 | 0.00 | 0.00 | 0.00 | 0.500 | 0.230 |
+| always_positive | 22.98 | 50.00 | 22.98 | 100.00 | 37.37 | 0.500 | 0.230 |
+| dc_audio | 56.11 | 50.01 | 22.99 | 38.74 | 28.85 | 0.556 | 0.321 |
+| dc_concat | 61.08 | 55.14 | 27.95 | 44.14 | 34.22 | 0.593 | 0.396 |
+| face_only | 60.25 | 55.55 | 28.19 | 46.85 | 35.13 | 0.580 | 0.343 |
+| highpass_audio | 56.52 | 51.55 | 24.33 | 42.34 | 30.89 | 0.566 | 0.328 |
+| highpass_concat | 62.11 | 55.49 | 28.48 | 43.24 | 34.31 | 0.588 | 0.390 |
+| original_audio | 57.14 | 52.58 | 25.42 | 44.14 | 32.24 | 0.571 | 0.335 |
+| original_concat | 62.94 | 57.61 | 30.42 | 47.75 | 37.16 | 0.600 | 0.401 |
+| raw_audio | 56.52 | 50.92 | 23.82 | 40.54 | 30.01 | 0.555 | 0.318 |
+| raw_concat | 61.28 | 55.27 | 28.13 | 44.14 | 34.34 | 0.592 | 0.383 |
+
+| Candidate | Matched control | F1 change (percentage points) | Positive repeats | Pass |
+|---|---|---:|---:|---|
+| dc_audio | raw_audio | -1.16 | 0/3 | False |
+| dc_concat | raw_concat | -0.12 | 0/3 | False |
+| highpass_audio | raw_audio | +0.88 | 1/3 | False |
+| highpass_concat | raw_concat | -0.04 | 1/3 | False |
+| raw_audio | original_audio | -2.23 | 0/3 | False |
+| raw_concat | original_concat | -2.81 | 0/3 | False |
+
+High-pass filtering increases combined-model accuracy from 61.28% to 62.11% relative to the newly extracted untreated control, but recall drops from 44.14% to 43.24% and F1 changes from 34.34% to 34.31%. This is not a demonstrated screening improvement. The original supplied-feature model remains stronger at 62.94% accuracy, 57.61% balanced accuracy and 37.16% F1.
+
+The median absolute DC offset was already small (about 2.29e-5 in normalized sample units). High-pass processing retained a median 95.5% of original RMS. These measurements do not identify which energy was noise. Filtering can produce transient overshoot: the observed maximum absolute sample was 1.41 versus 1.0 untreated; values were not clipped or renormalized. The findings do not rule out all preprocessing methods or establish a dataset performance ceiling.
+
+All 135 saved models were independently restored and retrained; all 5,313 predictions, folds, preprocessing statistics, input/source hashes, metrics and screens passed verification with zero restored-score error. The historical original-concatenation control was reproduced. All 112 tests passed, with one existing transcript-regex warning. The shared historical verifier also still reproduces the previous 195 models and 7,245 predictions.
+
+The earlier run `audio_preprocessing_20261108T154545839405Z` is superseded by this fully verified run after correcting an index-handling bug in the verification comparison table. Every prediction in the replacement run is exactly identical. No tolerance was widened. Per-participant caches, environment details and saved models remain local and excluded from Git.
+
+This is an exploratory reused-cohort negative result. Keep it in the research record; do not replace the existing audio/facial model with either cleanup variant. Stronger denoising and validated speaker isolation were not tested in this series.
+
+---
+
+## Final sparse and late-fusion comparison — 2026-11-08
+
+Run: `sparse_fusion_20261108T160011416879Z`. Full methods, all results, selection logs and paper-ready interpretation are in the [paper-writer log](paper_logs/README.md). Sparse concatenation reached 37.63% F1 versus 37.16% for original concatenation, but accuracy fell from 62.94% to 59.63%. Weighted fusion reached 35.36% F1 and matched quality adjustment 35.45%. No replacement passed against the original control. Two ancillary comparisons against weaker controls passed; they do not justify promotion. All 180 policy bundles and 6,762 predictions were verified, including 405 inner candidate and 45 weight vectors. All 116 tests passed. The bounded series is finished; retain the original control and report the negative quality-fusion finding.

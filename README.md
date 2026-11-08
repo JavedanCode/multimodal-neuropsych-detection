@@ -44,7 +44,31 @@ These are exploratory estimates on reused training participants, not fresh test
 results. The reliability-aware advantage remains unproven. Controls and unfavorable
 comparisons remain within each study so its result can be interpreted honestly.
 
+## Audio preprocessing follow-up (2026-11-08)
+
+The matched raw/DC-removal/50 Hz high-pass comparison did not improve the retained
+audio/facial control. Original features: **62.9% accuracy, 37.2% F1**; newly
+extracted untreated audio + face: **61.3%, 34.3%**; high-pass audio + face:
+**62.1%, 34.3%**. All 135 models and 5,313 predictions were verified; all 112 tests
+pass. Keep the original supplied acoustic features. Full methods and all results
+are recorded at the end of the [experiment history](docs/experiment_history.md).
+
 ## Run
+
+The final sparse/late-fusion series is complete. Sparse concatenation reached
+37.6% F1 but lower accuracy than the original control; weighted fusion reached
+35.4% F1 and the matched quality adjustment added less than 0.1 percentage points.
+No replacement passed the predeclared screen against the retained control.
+See the [paper-writer log and supporting files](docs/paper_logs/README.md) for all
+results, exact methods, selected settings and reproducibility checks.
+
+```powershell
+.venv\Scripts\python.exe -m src run audio-visual --sparse-fusion
+```
+
+This uses the existing original feature caches and does not repeat waveform
+extraction. Its [frozen protocol](docs/methods/sparse_fusion.md) defines the finite
+candidate set and stopping rule.
 
 Use PowerShell from this folder. The existing `.venv` contains the local setup.
 For a new environment, install with `python -m pip install -e '.[dev,neural,speech]'`.
@@ -56,6 +80,18 @@ downloaded by these commands. See the guide for cache preparation dependencies.
 .venv\Scripts\python.exe -m src run reference
 .venv\Scripts\python.exe -m src run audio-visual
 ```
+
+The controlled audio-cleanup follow-up is part of the audio/visual runner:
+
+```powershell
+.venv\Scripts\python.exe -m pip install -e '.[acoustic]'
+.venv\Scripts\python.exe -m src run audio-visual --preprocess-audio
+```
+
+It extracts matched untreated, DC-removed and gently high-pass-filtered audio
+features, then compares them with fixed facial features and the same folds.
+Extraction is resumable and keeps raw recordings unchanged. See the
+[fixed comparison protocol](docs/methods/audio_preprocessing.md).
 
 Each study prints its output folder. Reference-dependent studies require a baseline
 run folder. Verification accepts the study name and saved run folder:

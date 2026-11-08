@@ -22,6 +22,16 @@ def main(argv=None):
     run = commands.add_parser("run", help="Train and evaluate a maintained study")
     run.add_argument("study", choices=STUDIES)
     run.add_argument("--reference-run", type=Path)
+    run.add_argument(
+        "--preprocess-audio",
+        action="store_true",
+        help="Run the matched waveform cleanup comparison (audio-visual only)",
+    )
+    run.add_argument(
+        "--sparse-fusion",
+        action="store_true",
+        help="Run the final sparse/weighted/reliability comparison (audio-visual only)",
+    )
     verify = commands.add_parser("verify", help="Check a saved study's artifacts")
     verify.add_argument("study", choices=STUDIES)
     verify.add_argument("--run", type=Path, required=True)
@@ -29,6 +39,13 @@ def main(argv=None):
     project = Path(__file__).resolve().parents[1]
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     module_name = STUDIES[args.study]
+    if args.command == "run" and args.preprocess_audio and args.study != "audio-visual":
+        parser.error("--preprocess-audio is available only for audio-visual")
+    if args.command == "run" and args.sparse_fusion:
+        if args.study != "audio-visual" or args.preprocess_audio:
+            parser.error(
+                "--sparse-fusion requires audio-visual and cannot combine with --preprocess-audio"
+            )
     if args.command == "run" and args.study in {"text-candidates", "fallback"}:
         if args.reference_run is None:
             parser.error(f"{args.study} requires --reference-run")
@@ -39,6 +56,10 @@ def main(argv=None):
     with threadpool_limits(limits=1):
         if args.command == "verify":
             print(json.dumps(module.verify(project, args.run.resolve()), indent=2))
+        elif args.preprocess_audio:
+            print(module.run(project, preprocessing=True))
+        elif args.sparse_fusion:
+            print(module.run(project, sparse_fusion=True))
         elif args.study in {"text-candidates", "fallback"}:
             print(module.run(project, args.reference_run.resolve()))
         else:

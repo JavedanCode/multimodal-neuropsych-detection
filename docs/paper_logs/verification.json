@@ -1,0 +1,11 @@
+{
+  "policy_bundles_restored_and_refitted": 180,
+  "prediction_rows": 6762,
+  "inner_candidate_vectors_replayed": 405,
+  "inner_weight_vectors_replayed": 45,
+  "maximum_restored_score_error": 0.0,
+  "independent_quality_weights_verified": true,
+  "hashes_folds_preprocessing_selection_metrics_verified": true,
+  "historical_concat_reproduced": true,
+  "test_evaluated": false
+}
