@@ -1,0 +1,22 @@
+﻿.venv\Scripts\python.exe : Score/functionals/domain seed 42 fold 0
+At line:1 char:302
++ ... tch {} } }; .venv\Scripts\python.exe -m src run audio-visual --score- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Score/functionals/domain seed 42 fold 0:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Score/functionals/domain seed 42 fold 1
+Score/functionals/domain seed 42 fold 2
+Score/functionals/domain seed 42 fold 3
+Score/functionals/domain seed 42 fold 4
+Score/functionals/domain seed 137 fold 0
+Score/functionals/domain seed 137 fold 1
+Score/functionals/domain seed 137 fold 2
+Score/functionals/domain seed 137 fold 3
+Score/functionals/domain seed 137 fold 4
+Score/functionals/domain seed 2026 fold 0
+Score/functionals/domain seed 2026 fold 1
+Score/functionals/domain seed 2026 fold 2
+Score/functionals/domain seed 2026 fold 3
+Score/functionals/domain seed 2026 fold 4
+<project>\experiments\runs\score_functionals_domain_20261108T190307688594Z

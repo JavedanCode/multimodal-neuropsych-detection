@@ -83,6 +83,19 @@ once (reads every training archive), then run:
 .venv\Scripts\python.exe -m src run audio-visual --corrected
 ```
 
+A final predeclared comparison ([protocol](docs/methods/score_functionals_domain.md))
+tested the released PHQ score as a training target, the official 88 eGeMAPSv02
+functionals and interview-domain scaling. The best variant, a PHQ-score ridge on
+voiced audio + face, reached **57.6% accuracy, 38.0% F1** with higher recall but
+slightly lower balanced accuracy; no variant passed the screen. The audio/face
+series is finished: keep the original control. The
+[paper-writer log](docs/paper_logs/README.md) covers all three runs.
+
+```powershell
+.venv\Scripts\python.exe -c "from pathlib import Path; from src.dataset.egemaps_functionals import build; build(Path('.').resolve())"
+.venv\Scripts\python.exe -m src run audio-visual --score-study
+```
+
 Use PowerShell from this folder. The existing `.venv` contains the local setup.
 For a new environment, install with `python -m pip install -e '.[dev,neural,speech]'`.
 The authorized dataset and cached encoders must be provided locally; E-DAIC is not

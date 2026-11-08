@@ -2451,3 +2451,76 @@ AUC and AP are means over 15 folds; AUC changes are in points (x100).
 Interpretation. Voiced-only audio summaries improved ranking of the combined model (fold AUC 0.600 to 0.625, AP 0.401 to 0.431) but not F1 at the fixed threshold. They are within fold-to-fold noise, and AUC is not the screen's primary measure. Scaled fusion now uses both branches (held-out sign agreement about 0.77 with audio and 0.75 with face), but stays below early concatenation; the fixed quality discount reduced F1 by 1.85 points. Every audio/face policy is at or below the always-positive F1 of 37.37%, so F1 alone does not distinguish them from a trivial rule. The quality-fusion conclusion is now a valid negative result rather than an artefact of unequal scales.
 
 Verification: 135 policy bundles restored and refitted, 5,313 predictions with zero restored-score error, 30 branch scales recomputed from saved inner margins, 15 fusion weights recomputed from saved scores, element-wise fusion recomputation, and the historical original-concatenation scores reproduced. The earlier `sparse_fusion` run still re-verifies under the changed source (180 bundles, 6,762 predictions, zero error). Verifiers now accept source files committed at `feadacb` (`RESULT_COMMITS` in `src/training/provenance.py`), so earlier runs remain verifiable after source changes. All 124 tests passed. Exploratory reused-cohort result; no development/test evaluation.
+
+
+---
+
+## PHQ-score target, eGeMAPS functionals and domain scaling — 2026-11-08
+
+Run: `score_functionals_domain_20261108T190307688594Z`. [Frozen protocol](methods/score_functionals_domain.md). The user approved this bundled comparison, including use of the released PHQ score as a training target.
+
+**Decision: no candidate passes; retain `original_concat`.** This is the last planned audio/face series. Every audio/face policy remains within about one F1 point of the always-positive rule (37.37%).
+
+Three changes were tested on the same 161 participants and folds:
+
+1. **Official eGeMAPSv02 functionals** (88 features, openSMILE 2.6.0) extracted from 43.47 hours of untreated recordings. As an independent check of the earlier voicing fix, the functionals' voiced F0 mean agrees with the corrected voiced-only F0 summary from the supplied descriptors at r = 0.99998 (median difference 0.007 semitones).
+2. **Domain-conditional standardization** (WoZ vs AI, shrinkage 10 toward pooled statistics, fitted within training partitions).
+3. **Released PHQ score as training target**: balanced-weighted ridge on PHQ − 9.5, predicted positive at ≥ 9.5, alpha from [1, 10, 100, 1000] by inner squared error on the score. Evaluation used the unchanged binary labels.
+
+| Policy | Accuracy | Balanced accuracy | Precision | Recall | F1 ± SD | AUC | AP |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| original_concat | 62.94 | 57.61 | 30.42 | 47.75 | 37.16 ± 4.02 | 0.600 | 0.401 |
+| voiced_concat | 63.56 | 57.38 | 30.51 | 45.95 | 36.66 ± 2.66 | 0.625 | 0.431 |
+| func_concat | 63.35 | 57.25 | 30.24 | 45.95 | 36.45 ± 3.44 | 0.586 | 0.352 |
+| voiced_concat_domain | 62.94 | 56.98 | 30.00 | 45.95 | 36.30 ± 1.75 | 0.614 | 0.408 |
+| func_concat_domain | 63.35 | 56.30 | 29.62 | 43.24 | 35.15 ± 1.35 | 0.578 | 0.343 |
+| score_voiced_concat | 57.56 | 57.28 | 28.59 | 56.76 | 38.02 ± 3.96 | 0.613 | 0.396 |
+| score_func_concat | 56.31 | 55.52 | 27.24 | 54.05 | 36.22 ± 2.05 | 0.594 | 0.368 |
+| score_func_concat_domain | 56.73 | 56.11 | 27.73 | 54.95 | 36.86 ± 0.74 | 0.587 | 0.361 |
+| original_audio | 57.14 | 52.58 | 25.42 | 44.14 | 32.24 ± 5.22 | 0.571 | 0.335 |
+| voiced_audio | 59.42 | 54.06 | 26.69 | 44.14 | 33.23 ± 3.86 | 0.576 | 0.329 |
+| func_audio | 60.87 | 53.11 | 26.15 | 38.74 | 31.21 ± 3.01 | 0.522 | 0.286 |
+| face | 60.25 | 55.55 | 28.19 | 46.85 | 35.13 ± 1.45 | 0.580 | 0.343 |
+| always_negative | 77.02 | 50.00 | 0.00 | 0.00 | 0.00 ± 0.00 | 0.500 | 0.230 |
+| always_positive | 22.98 | 50.00 | 22.98 | 100.00 | 37.37 ± 0.00 | 0.500 | 0.230 |
+
+Classification metrics are means of three repeat-level pooled out-of-fold values (SD across repeats, not a confidence interval). AUC/AP are means over 15 folds.
+
+| Candidate | Control | F1 change | BA change | AUC change | Recall change | Positive repeats | Pass |
+|---|---|---:|---:|---:|---:|---:|---|
+| func_concat | original_concat | -0.71 | -0.36 | -1.43 | -1.80 | 1/3 | False |
+| voiced_concat_domain | original_concat | -0.86 | -0.63 | +1.42 | -1.80 | 1/3 | False |
+| func_concat_domain | original_concat | -2.01 | -1.31 | -2.26 | -4.50 | 1/3 | False |
+| score_voiced_concat | original_concat | +0.86 | -0.33 | +1.30 | +9.01 | 1/3 | False |
+| score_func_concat | original_concat | -0.94 | -2.09 | -0.63 | +6.31 | 1/3 | False |
+| score_func_concat_domain | original_concat | -0.30 | -1.50 | -1.33 | +7.21 | 1/3 | False |
+| func_audio | original_audio | -1.04 | +0.52 | -4.90 | -5.41 | 1/3 | False |
+| func_audio | voiced_audio | -2.02 | -0.96 | -5.32 | -5.41 | 0/3 | False |
+| func_concat | voiced_concat | -0.21 | -0.13 | -3.89 | +0.00 | 1/3 | False |
+| voiced_concat_domain | voiced_concat | -0.36 | -0.40 | -1.04 | +0.00 | 1/3 | False |
+| func_concat_domain | func_concat | -1.30 | -0.95 | -0.82 | -2.70 | 1/3 | False |
+| score_voiced_concat | voiced_concat | +1.36 | -0.11 | -1.16 | +10.81 | 1/3 | False |
+| score_func_concat | func_concat | -0.23 | -1.73 | +0.80 | +8.11 | 1/3 | False |
+| score_func_concat_domain | score_func_concat | +0.63 | +0.58 | -0.70 | +0.90 | 1/3 | False |
+
+Changes are in percentage points (AUC x100). Paired label-stratified participant bootstrap (2,000 resamples, seed 20261108) of the mean-over-repeats difference against `original_concat`:
+
+| Candidate vs original_concat | F1 change 95% interval | Share of resamples > 0 | Pooled AUC change 95% interval | Share > 0 |
+|---|---:|---:|---:|---:|
+| func_concat | -7.0 to +6.0 | 0.42 | -6.7 to +2.9 | 0.19 |
+| voiced_concat_domain | -4.9 to +3.1 | 0.33 | -1.7 to +5.1 | 0.82 |
+| func_concat_domain | -8.1 to +4.1 | 0.26 | -7.0 to +1.9 | 0.13 |
+| score_voiced_concat | -7.5 to +9.4 | 0.58 | -7.2 to +10.7 | 0.63 |
+| score_func_concat | -9.9 to +8.3 | 0.42 | -9.5 to +8.4 | 0.44 |
+| score_func_concat_domain | -9.6 to +9.3 | 0.47 | -9.9 to +8.2 | 0.42 |
+
+Pooled AUC here is computed over each repeat's combined held-out folds, unlike the screen's mean fold AUC.
+
+**Interpretation.**
+- **Score target.** `score_voiced_concat` had the highest F1 (38.02%, +0.86 points) and recall (56.76%, +9.0), but balanced accuracy fell 0.33 points and F1 improved in only 1/3 repeats; the bootstrap interval is −7.5 to +9.4 points. Ridge chose the strongest regularization (alpha = 1000, the grid edge) in all 45 score fits. Held-out PHQ prediction was weak (RMSE 6.5–6.6, Pearson r 0.17–0.23), so audio/face summaries carry little linear information about symptom severity in this cohort. The grid was fixed in advance and was not extended.
+- **Functionals.** The 88 official functionals were worse than the corrected 47 voiced summaries for audio alone (fold AUC 0.522 vs 0.576) and in combination (0.586 vs 0.625). More features without more participants added variance.
+- **Domain scaling.** It did not help (−0.4 to −1.3 F1 points against the matching unscaled models).
+- **Label/score disagreements.** For the 12 participants with PHQ ≥ 10 but released label 0, the original control already predicts 58% positive, and score models 61–64%. These people look positive to every model, which lowers measured precision for all of them.
+- **AI subgroup.** AI-interview F1 varies widely (0.45–0.65) but rests on 18 participants with 5 positives; do not interpret it.
+
+Verification: all 180 policy bundles restored and refitted; 6,762 predictions with zero restored-score error; 45 alpha choices recomputed from saved inner scores; 45 closed-form weighted-ridge checks; 45 domain-statistic checks; independent sklearn cross-check of the vectorized bootstrap on the first 25 resamples; regression and disagreement tables recomputed; historical original-concatenation scores reproduced. A pre-run multi-agent code review found no leakage and one verifier coverage gap, fixed before running. Exploratory reused-cohort result; no development/test evaluation.

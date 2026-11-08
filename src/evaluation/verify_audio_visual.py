@@ -35,6 +35,10 @@ def verify(project, out):
         from src.evaluation.verify_sparse_fusion import verify as verify_sparse
 
         return verify_sparse(project, out)
+    if manifest.get("study") == "score_functionals_domain":
+        from src.evaluation.verify_score_study import verify as verify_score
+
+        return verify_score(project, out)
     if manifest.get("study") == "corrected_fusion":
         from src.evaluation.verify_corrected import verify as verify_corrected
 

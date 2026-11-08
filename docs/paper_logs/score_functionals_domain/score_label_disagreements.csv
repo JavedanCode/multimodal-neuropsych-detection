@@ -1,0 +1,15 @@
+condition,fraction_predicted_positive
+always_negative,0.0
+always_positive,1.0
+face,0.5833333333333334
+func_audio,0.3055555555555556
+func_concat,0.5277777777777778
+func_concat_domain,0.5277777777777778
+original_audio,0.2777777777777778
+original_concat,0.5833333333333334
+score_func_concat,0.6388888888888888
+score_func_concat_domain,0.6111111111111112
+score_voiced_concat,0.6388888888888888
+voiced_audio,0.3333333333333333
+voiced_concat,0.5833333333333334
+voiced_concat_domain,0.6111111111111112

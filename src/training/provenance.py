@@ -33,7 +33,11 @@ def source_hashes(project: Path) -> dict[str, str]:
 
 # Committed revisions that produced recorded runs after the cleanup snapshot
 # (feadacb: audio preprocessing and sparse-fusion runs). Source files only.
-RESULT_COMMITS = ("feadacba68bdd51440161d3ca0721b103ff2e241",)
+RESULT_COMMITS = (
+    "feadacba68bdd51440161d3ca0721b103ff2e241",
+    # corrected_fusion run (voiced audio and common-scale fusion).
+    "04df0840d3ef35b69c945d42f29c0794c8407324",
+)
 
 
 @lru_cache(maxsize=256)

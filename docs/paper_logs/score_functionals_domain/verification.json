@@ -1,0 +1,11 @@
+{
+  "policy_bundles_restored_and_refitted": 180,
+  "prediction_rows": 6762,
+  "alpha_choices_recomputed_from_saved_scores": 45,
+  "ridge_closed_form_checks": 45,
+  "domain_statistics_checks": 45,
+  "maximum_restored_score_error": 0.0,
+  "bootstrap_reproduced": true,
+  "historical_concat_reproduced": true,
+  "test_evaluated": false
+}

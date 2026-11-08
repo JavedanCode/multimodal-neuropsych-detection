@@ -1,0 +1,10 @@
+{
+  "policy_bundles_restored_and_refitted": 135,
+  "prediction_rows": 5313,
+  "branch_scales_recomputed": 30,
+  "fusion_weights_recomputed_from_saved_scores": 15,
+  "maximum_restored_score_error": 0.0,
+  "independent_fusion_verified": true,
+  "historical_concat_reproduced": true,
+  "test_evaluated": false
+}

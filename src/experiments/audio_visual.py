@@ -140,7 +140,13 @@ def predict(bundle, sets, q, available):
     )
 
 
-def run(project, preprocessing=False, sparse_fusion=False, corrected=False):
+def run(
+    project, preprocessing=False, sparse_fusion=False, corrected=False, score_study=False
+):
+    if score_study:
+        from src.training.score_study import run as run_score
+
+        return run_score(project)
     if corrected:
         from src.training.corrected_study import run as run_corrected
 

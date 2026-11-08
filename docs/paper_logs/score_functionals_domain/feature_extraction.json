@@ -1,0 +1,23 @@
+{
+  "egemaps_functionals": {
+    "participants": 161,
+    "features": 88,
+    "hours": 43.46864444444444,
+    "extraction_seconds": 10571.947361999599,
+    "opensmile": "2.6.0"
+  },
+  "voiced_audio": {
+    "participants": 161,
+    "features": 47,
+    "voicing_columns": 26,
+    "frames": 15646660,
+    "voiced_fraction_median": 0.2667750146389264,
+    "missing_cells": 0,
+    "legacy_max_abs_difference": 0.0,
+    "rule": "sma3nz descriptors over F0>0 frames; -201 missing; sma3 all frames"
+  },
+  "functional_vs_voiced_F0_mean": {
+    "pearson_r": 0.9999824773009496,
+    "median_abs_difference_semitones": 0.006814277933838042
+  }
+}

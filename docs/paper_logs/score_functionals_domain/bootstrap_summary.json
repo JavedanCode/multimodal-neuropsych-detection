@@ -1,0 +1,92 @@
+[
+  {
+    "candidate": "func_concat",
+    "control": "original_concat",
+    "resamples": 2000,
+    "f1_delta_ci95": [
+      -0.07009346490924022,
+      0.05973748400807086
+    ],
+    "f1_delta_fraction_positive": 0.418,
+    "pooled_auc_delta_ci95": [
+      -0.06693730020342928,
+      0.028629032258064516
+    ],
+    "pooled_auc_delta_fraction_positive": 0.1885
+  },
+  {
+    "candidate": "voiced_concat_domain",
+    "control": "original_concat",
+    "resamples": 2000,
+    "f1_delta_ci95": [
+      -0.04864819019672844,
+      0.0307102047640697
+    ],
+    "f1_delta_fraction_positive": 0.3345,
+    "pooled_auc_delta_ci95": [
+      -0.01678472827666376,
+      0.05085730892182505
+    ],
+    "pooled_auc_delta_fraction_positive": 0.8165
+  },
+  {
+    "candidate": "func_concat_domain",
+    "control": "original_concat",
+    "resamples": 2000,
+    "f1_delta_ci95": [
+      -0.08071479746758739,
+      0.04113258990706082
+    ],
+    "f1_delta_fraction_positive": 0.2565,
+    "pooled_auc_delta_ci95": [
+      -0.0701140656785818,
+      0.01905151118860785
+    ],
+    "pooled_auc_delta_fraction_positive": 0.1325
+  },
+  {
+    "candidate": "score_voiced_concat",
+    "control": "original_concat",
+    "resamples": 2000,
+    "f1_delta_ci95": [
+      -0.07520805481506852,
+      0.09374924495068804
+    ],
+    "f1_delta_fraction_positive": 0.5785,
+    "pooled_auc_delta_ci95": [
+      -0.07215380703283926,
+      0.10741245277535581
+    ],
+    "pooled_auc_delta_fraction_positive": 0.6285
+  },
+  {
+    "candidate": "score_func_concat",
+    "control": "original_concat",
+    "resamples": 2000,
+    "f1_delta_ci95": [
+      -0.09938729452645517,
+      0.08255814473879974
+    ],
+    "f1_delta_fraction_positive": 0.4185,
+    "pooled_auc_delta_ci95": [
+      -0.09532476024411508,
+      0.08384372275501305
+    ],
+    "pooled_auc_delta_fraction_positive": 0.4445
+  },
+  {
+    "candidate": "score_func_concat_domain",
+    "control": "original_concat",
+    "resamples": 2000,
+    "f1_delta_ci95": [
+      -0.09620663858719032,
+      0.09347225675858464
+    ],
+    "f1_delta_fraction_positive": 0.469,
+    "pooled_auc_delta_ci95": [
+      -0.09910091543156059,
+      0.08212547224643985
+    ],
+    "pooled_auc_delta_fraction_positive": 0.416
+  }
+]
