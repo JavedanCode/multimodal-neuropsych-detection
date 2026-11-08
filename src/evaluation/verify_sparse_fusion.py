@@ -17,6 +17,7 @@ from src.training.fusion_study import (
     comparison_pairs,
 )
 from src.training.splits import splits
+from src.training.provenance import matches_hash
 from src.training.validation import sha256
 
 
@@ -24,7 +25,7 @@ def verify(project, output):
     manifest = json.loads((output / "manifest.json").read_text())
     assert not manifest["test_evaluated"] and not manifest["development_evaluated"]
     for name, digest in manifest["hashes"].items():
-        assert sha256(project / name) == digest, name
+        assert matches_hash(project / name, digest), name
     for name, digest in manifest["models"].items():
         assert sha256(output / "models" / name) == digest, name
     features, labels, quality, available = load_inputs(project)

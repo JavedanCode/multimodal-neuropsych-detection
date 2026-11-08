@@ -35,6 +35,10 @@ def verify(project, out):
         from src.evaluation.verify_sparse_fusion import verify as verify_sparse
 
         return verify_sparse(project, out)
+    if manifest.get("study") == "corrected_fusion":
+        from src.evaluation.verify_corrected import verify as verify_corrected
+
+        return verify_corrected(project, out)
     for p, h in manifest["hashes"].items():
         assert matches_hash(project / p, h)
     for p, h in manifest["models"].items():
@@ -241,7 +245,7 @@ def verify_preprocessing(project, out):
     manifest = json.loads((out / "manifest.json").read_text())
     assert not manifest["test_evaluated"] and not manifest["development_evaluated"]
     for name, digest in manifest["hashes"].items():
-        assert sha256(project / name) == digest, name
+        assert matches_hash(project / name, digest), name
     for name, digest in manifest["models"].items():
         assert sha256(out / "models" / name) == digest, name
     conditions, labels = preprocessing_inputs(project)

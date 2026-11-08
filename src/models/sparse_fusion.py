@@ -86,8 +86,37 @@ def fusion_weights(quality, available, audio_weight, reliability=False):
     return np.divide(weights, total, out=np.zeros_like(weights), where=total > 0)
 
 
-def fuse_scores(audio, face, quality, available, weight, prior, reliability=False):
+def margin_scale(scores):
+    """Root-mean-square margin around the branch's own zero decision boundary."""
+    scores = np.asarray(scores, dtype=float)
+    if not len(scores) or not np.isfinite(scores).all():
+        raise ValueError("Finite out-of-fold margins required")
+    scale = float(np.sqrt(np.mean(scores**2)))
+    return scale if scale > 0 else 1.0
+
+
+def fuse_scores(
+    audio, face, quality, available, weight, prior, reliability=False, scales=None
+):
+    """Fuse two branch margins; return a score thresholded at zero.
+
+    Without ``scales`` this is the historical rule (weighted mean of
+    ``expit(margin)`` minus .5). With ``scales`` each margin is divided by its
+    training-only scale first, so the applied weight equals the nominal weight.
+    """
     weights = fusion_weights(quality, available, weight, reliability)
+    if scales is not None:
+        scales = np.asarray(scales, dtype=float)
+        if scales.shape != (2,) or not (scales > 0).all():
+            raise ValueError("Two positive branch scales required")
+        margins = np.column_stack([audio, face]) / scales
+        margins = np.where(np.asarray(available, dtype=bool), margins, 0.0)
+        prediction = (margins * weights).sum(axis=1)
+        no_input = weights.sum(axis=1) == 0
+        prediction[no_input] = logit(np.broadcast_to(prior, prediction.shape))[
+            no_input
+        ]
+        return prediction
     probabilities = expit(np.column_stack([audio, face]))
     probabilities = np.where(np.asarray(available, dtype=bool), probabilities, 0.0)
     prediction = (probabilities * weights).sum(axis=1)
@@ -109,4 +138,5 @@ def predict_policy(bundle, features, quality, available):
         bundle["weight"],
         bundle["prior"],
         bundle["reliability"],
+        bundle.get("scales"),
     )

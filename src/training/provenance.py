@@ -31,15 +31,27 @@ def source_hashes(project: Path) -> dict[str, str]:
     }
 
 
+# Committed revisions that produced recorded runs after the cleanup snapshot
+# (feadacb: audio preprocessing and sparse-fusion runs). Source files only.
+RESULT_COMMITS = ("feadacba68bdd51440161d3ca0721b103ff2e241",)
+
+
 @lru_cache(maxsize=256)
 def archived_hashes(relative_path: str) -> frozenset[str]:
-    """Return hashes for a source file in the explicitly recorded snapshot."""
+    """Return hashes for a source file in the explicitly recorded revisions."""
     if not relative_path.startswith(("src/", "docs/")):
         return frozenset()
     history = json.loads((PROJECT / "configs/history.json").read_text())
     original = history["historical_paths"].get(relative_path, relative_path)
+    hashes = _revision_hashes(history["snapshot_commit"], original)
+    for commit in RESULT_COMMITS:
+        hashes |= _revision_hashes(commit, relative_path)
+    return hashes
+
+
+def _revision_hashes(commit: str, path: str) -> frozenset[str]:
     result = subprocess.run(
-        ["git", "show", f"{history['snapshot_commit']}:{original}"],
+        ["git", "show", f"{commit}:{path}"],
         cwd=PROJECT,
         capture_output=True,
         check=False,

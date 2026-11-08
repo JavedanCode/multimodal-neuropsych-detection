@@ -70,6 +70,19 @@ This uses the existing original feature caches and does not repeat waveform
 extraction. Its [frozen protocol](docs/methods/sparse_fusion.md) defines the finite
 candidate set and stopping rule.
 
+A code review then found two defects: unvoiced openSMILE placeholders were
+averaged into the voicing-dependent audio summaries, and late fusion averaged
+branch probabilities on unequal scales. The [corrected run](docs/methods/corrected_fusion.md)
+fixes both. Voiced-only audio + face reached **63.6% accuracy, 36.7% F1** and fold
+AUC 0.625 (original 0.600); scaled weighted fusion reached 34.8% F1. No candidate
+passed the screen, so the original control is retained. Build the voiced summaries
+once (reads every training archive), then run:
+
+```powershell
+.venv\Scripts\python.exe -c "from pathlib import Path; from src.dataset.voiced_audio import build; build(Path('.').resolve())"
+.venv\Scripts\python.exe -m src run audio-visual --corrected
+```
+
 Use PowerShell from this folder. The existing `.venv` contains the local setup.
 For a new environment, install with `python -m pip install -e '.[dev,neural,speech]'`.
 The authorized dataset and cached encoders must be provided locally; E-DAIC is not

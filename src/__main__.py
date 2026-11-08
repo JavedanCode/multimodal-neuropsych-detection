@@ -32,6 +32,11 @@ def main(argv=None):
         action="store_true",
         help="Run the final sparse/weighted/reliability comparison (audio-visual only)",
     )
+    run.add_argument(
+        "--corrected",
+        action="store_true",
+        help="Run the voiced-audio and common-scale fusion correction (audio-visual only)",
+    )
     verify = commands.add_parser("verify", help="Check a saved study's artifacts")
     verify.add_argument("study", choices=STUDIES)
     verify.add_argument("--run", type=Path, required=True)
@@ -46,6 +51,9 @@ def main(argv=None):
             parser.error(
                 "--sparse-fusion requires audio-visual and cannot combine with --preprocess-audio"
             )
+    if args.command == "run" and args.corrected:
+        if args.study != "audio-visual" or args.preprocess_audio or args.sparse_fusion:
+            parser.error("--corrected requires audio-visual and runs on its own")
     if args.command == "run" and args.study in {"text-candidates", "fallback"}:
         if args.reference_run is None:
             parser.error(f"{args.study} requires --reference-run")
@@ -58,6 +66,8 @@ def main(argv=None):
             print(json.dumps(module.verify(project, args.run.resolve()), indent=2))
         elif args.preprocess_audio:
             print(module.run(project, preprocessing=True))
+        elif args.corrected:
+            print(module.run(project, corrected=True))
         elif args.sparse_fusion:
             print(module.run(project, sparse_fusion=True))
         elif args.study in {"text-candidates", "fallback"}:

@@ -21,6 +21,8 @@ from src.dataset.preprocessing import ParticipantPreprocessor
 
 LOG = logging.getLogger(__name__)
 VERSION = 1
+VOICING_COLUMN = "F0semitoneFrom27.5Hz_sma3nz"
+UNVOICED_PLACEHOLDER = -201.0
 
 
 class ForwardReader(io.RawIOBase):
@@ -42,8 +44,20 @@ def aggregate(
     modality: str,
     chunk_rows=10000,
     confidence_threshold=0.8,
+    voiced_only=False,
 ):
-    """Merge chunk moments using population variance; no whole recording in RAM."""
+    """Merge chunk moments using population variance; no whole recording in RAM.
+
+    ``voiced_only`` (audio only) summarizes ``*_sma3nz`` descriptors over frames
+    with F0 > 0 and treats openSMILE's -201 placeholder as missing; the default
+    keeps the historical all-frame behaviour used by earlier runs.
+    """
+    if voiced_only and modality != "audio":
+        raise ValueError("Voicing masks apply to audio descriptors only")
+    voicing = np.array([c.endswith("_sma3nz") for c in columns])
+    if voiced_only and VOICING_COLUMN not in columns:
+        raise ValueError("Voicing requires the F0 descriptor")
+    voiced_frames = 0
     count = np.zeros(len(columns), dtype=np.int64)
     mean = np.zeros(len(columns))
     m2 = np.zeros(len(columns))
@@ -63,6 +77,11 @@ def aggregate(
         )
         finite = np.isfinite(values)
         invalid += int((~finite).sum())
+        if voiced_only:
+            voiced = values[:, columns.index(VOICING_COLUMN)] > 0
+            voiced_frames += int(voiced.sum())
+            finite &= ~(voicing[None, :] & ~voiced[:, None])
+            finite &= values != UNVOICED_PLACEHOLDER
         if modality == "facial":
             confidence = pd.to_numeric(chunk["confidence"], errors="coerce").to_numpy(
                 float
@@ -98,6 +117,8 @@ def aggregate(
     for i, column in enumerate(columns):
         features[f"{modality}__{column}__mean"] = float(mean[i]) if count[i] else None
         features[f"{modality}__{column}__std"] = float(std[i]) if count[i] else None
+    if voiced_only:
+        features["audio__voiced_fraction"] = voiced_frames / total if total else None
     quality = {
         "available": float(bool(count.any())),
         "invalid_fraction": invalid / (total * len(columns)) if total else 1.0,

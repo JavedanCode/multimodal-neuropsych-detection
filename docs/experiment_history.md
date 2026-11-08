@@ -2404,3 +2404,50 @@ This is an exploratory reused-cohort negative result. Keep it in the research re
 ## Final sparse and late-fusion comparison — 2026-11-08
 
 Run: `sparse_fusion_20261108T160011416879Z`. Full methods, all results, selection logs and paper-ready interpretation are in the [paper-writer log](paper_logs/README.md). Sparse concatenation reached 37.63% F1 versus 37.16% for original concatenation, but accuracy fell from 62.94% to 59.63%. Weighted fusion reached 35.36% F1 and matched quality adjustment 35.45%. No replacement passed against the original control. Two ancillary comparisons against weaker controls passed; they do not justify promotion. All 180 policy bundles and 6,762 predictions were verified, including 405 inner candidate and 45 weight vectors. All 116 tests passed. The bounded series is finished; retain the original control and report the negative quality-fusion finding.
+
+---
+
+## Corrected voicing aggregation and common-scale fusion — 2026-11-08
+
+Run: `corrected_fusion_20261108T180359546982Z`. [Frozen protocol](methods/corrected_fusion.md).
+
+**Decision: no candidate passes; retain `original_concat`.** This run corrects two defects found by code review and is the valid test of those ideas. It is not a new search.
+
+**Defect 1 (audio features).** `tables.aggregate` averaged openSMILE's unvoiced placeholders (0 for F0/jitter/shimmer/HNR/H1-H2/H1-A3, -201 for F1-F3 amplitude) with real values. For example, participant 302's F0 mean was 4.9 semitones over all frames versus 25.6 over voiced frames. The corrected summaries use voiced frames (F0 > 0) for the 13 `*_sma3nz` descriptors, treat -201 as missing and add `audio__voiced_fraction` (47 features; median voiced fraction 0.267). The same pass recomputed the legacy summaries and reproduced `features.parquet` exactly (maximum difference 0.0). The waveform re-extraction study (`audio_preprocessing`), aligned utterance audio (`audio_summary.summarize`, `contracts.interval_summary`) used the same all-frame averaging and were not rebuilt.
+
+**Defect 2 (late fusion).** `fuse_scores` averaged `expit(margin)` from branches whose margin scales differed up to about 30x in the sparse series, so nominal weights were not applied weights. The corrected rule divides each margin by the RMS of that branch's inner out-of-fold margins before weighting. The historical unscaled rule remains the default so earlier runs still replay.
+
+All branches use the fixed historical recipe (all features, balanced L2 logistic, C=.1). With fixed C, the held-out face/audio margin-scale ratio was only 1.0–2.4 (mean 1.6), so the scale defect mostly arose from per-branch C selection in the sparse series.
+
+| Condition | Accuracy | Balanced accuracy | Precision | Recall | F1 | AUC | AP |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| always_negative | 77.02 | 50.00 | 0.00 | 0.00 | 0.00 | 0.500 | 0.230 |
+| always_positive | 22.98 | 50.00 | 22.98 | 100.00 | 37.37 | 0.500 | 0.230 |
+| original_audio | 57.14 | 52.58 | 25.42 | 44.14 | 32.24 | 0.571 | 0.335 |
+| voiced_audio | 59.42 | 54.06 | 26.69 | 44.14 | 33.23 | 0.576 | 0.329 |
+| face | 60.25 | 55.55 | 28.19 | 46.85 | 35.13 | 0.580 | 0.343 |
+| original_concat | 62.94 | 57.61 | 30.42 | 47.75 | 37.16 | 0.600 | 0.401 |
+| voiced_concat | 63.56 | 57.38 | 30.51 | 45.95 | 36.66 | 0.625 | 0.431 |
+| late_equal_raw | 60.46 | 53.47 | 26.48 | 40.54 | 32.00 | 0.595 | 0.400 |
+| late_equal_scaled | 61.28 | 53.37 | 26.58 | 38.74 | 31.51 | 0.588 | 0.374 |
+| late_weighted_scaled | 62.94 | 56.03 | 29.16 | 43.24 | 34.81 | 0.582 | 0.353 |
+| late_quality_scaled | 62.11 | 54.54 | 27.77 | 40.54 | 32.96 | 0.588 | 0.357 |
+
+| Candidate | Control | F1 change (points) | BA change | AUC change | Positive repeats | Pass |
+|---|---|---:|---:|---:|---:|---|
+| voiced_concat | original_concat | -0.50 | -0.23 | +2.46 | 1/3 | False |
+| late_equal_scaled | original_concat | -5.65 | -4.24 | -1.21 | 0/3 | False |
+| late_weighted_scaled | original_concat | -2.34 | -1.58 | -1.86 | 1/3 | False |
+| late_quality_scaled | original_concat | -4.20 | -3.07 | -1.17 | 1/3 | False |
+| voiced_audio | original_audio | +0.99 | +1.48 | +0.42 | 2/3 | False |
+| late_equal_scaled | late_equal_raw | -0.49 | -0.09 | -0.73 | 1/3 | False |
+| late_weighted_scaled | late_equal_scaled | +3.30 | +2.66 | -0.65 | 2/3 | False |
+| late_quality_scaled | late_weighted_scaled | -1.85 | -1.49 | +0.68 | 0/3 | False |
+| late_weighted_scaled | face | -0.32 | +0.48 | +0.12 | 1/3 | False |
+| late_weighted_scaled | voiced_audio | +1.59 | +1.97 | +0.60 | 2/3 | False |
+
+AUC and AP are means over 15 folds; AUC changes are in points (x100).
+
+Interpretation. Voiced-only audio summaries improved ranking of the combined model (fold AUC 0.600 to 0.625, AP 0.401 to 0.431) but not F1 at the fixed threshold. They are within fold-to-fold noise, and AUC is not the screen's primary measure. Scaled fusion now uses both branches (held-out sign agreement about 0.77 with audio and 0.75 with face), but stays below early concatenation; the fixed quality discount reduced F1 by 1.85 points. Every audio/face policy is at or below the always-positive F1 of 37.37%, so F1 alone does not distinguish them from a trivial rule. The quality-fusion conclusion is now a valid negative result rather than an artefact of unequal scales.
+
+Verification: 135 policy bundles restored and refitted, 5,313 predictions with zero restored-score error, 30 branch scales recomputed from saved inner margins, 15 fusion weights recomputed from saved scores, element-wise fusion recomputation, and the historical original-concatenation scores reproduced. The earlier `sparse_fusion` run still re-verifies under the changed source (180 bundles, 6,762 predictions, zero error). Verifiers now accept source files committed at `feadacb` (`RESULT_COMMITS` in `src/training/provenance.py`), so earlier runs remain verifiable after source changes. All 124 tests passed. Exploratory reused-cohort result; no development/test evaluation.
