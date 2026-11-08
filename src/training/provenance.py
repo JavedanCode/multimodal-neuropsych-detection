@@ -37,6 +37,8 @@ RESULT_COMMITS = (
     "feadacba68bdd51440161d3ca0721b103ff2e241",
     # corrected_fusion run (voiced audio and common-scale fusion).
     "04df0840d3ef35b69c945d42f29c0794c8407324",
+    # score_functionals_domain run.
+    "83b3e9c68075860e78c5122cee502cd7d1f6f1d2",
 )
 
 
