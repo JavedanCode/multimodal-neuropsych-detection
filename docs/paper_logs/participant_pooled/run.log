@@ -1,0 +1,37 @@
+﻿.venv\Scripts\python.exe : Participant/pooled t161 seed 42 fold 0
+At line:1 char:302
++ ... tch {} } }; .venv\Scripts\python.exe -m src run audio-visual --pooled ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Participant/pooled t161 seed 42 fold 0:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Participant/pooled t161 seed 42 fold 1
+Participant/pooled t161 seed 42 fold 2
+Participant/pooled t161 seed 42 fold 3
+Participant/pooled t161 seed 42 fold 4
+Participant/pooled t161 seed 137 fold 0
+Participant/pooled t161 seed 137 fold 1
+Participant/pooled t161 seed 137 fold 2
+Participant/pooled t161 seed 137 fold 3
+Participant/pooled t161 seed 137 fold 4
+Participant/pooled t161 seed 2026 fold 0
+Participant/pooled t161 seed 2026 fold 1
+Participant/pooled t161 seed 2026 fold 2
+Participant/pooled t161 seed 2026 fold 3
+Participant/pooled t161 seed 2026 fold 4
+Participant/pooled p217 seed 42 fold 0
+Participant/pooled p217 seed 42 fold 1
+Participant/pooled p217 seed 42 fold 2
+Participant/pooled p217 seed 42 fold 3
+Participant/pooled p217 seed 42 fold 4
+Participant/pooled p217 seed 137 fold 0
+Participant/pooled p217 seed 137 fold 1
+Participant/pooled p217 seed 137 fold 2
+Participant/pooled p217 seed 137 fold 3
+Participant/pooled p217 seed 137 fold 4
+Participant/pooled p217 seed 2026 fold 0
+Participant/pooled p217 seed 2026 fold 1
+Participant/pooled p217 seed 2026 fold 2
+Participant/pooled p217 seed 2026 fold 3
+Participant/pooled p217 seed 2026 fold 4
+<project>\experiments\runs\participant_pooled_20261112T071357784484Z

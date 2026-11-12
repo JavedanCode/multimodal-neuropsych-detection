@@ -141,8 +141,17 @@ def predict(bundle, sets, q, available):
 
 
 def run(
-    project, preprocessing=False, sparse_fusion=False, corrected=False, score_study=False
+    project,
+    preprocessing=False,
+    sparse_fusion=False,
+    corrected=False,
+    score_study=False,
+    pooled_study=False,
 ):
+    if pooled_study:
+        from src.training.pooled_study import run as run_pooled
+
+        return run_pooled(project)
     if score_study:
         from src.training.score_study import run as run_score
 

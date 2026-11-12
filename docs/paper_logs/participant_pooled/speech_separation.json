@@ -1,0 +1,44 @@
+{
+  "partitions": [
+    "train",
+    "dev"
+  ],
+  "participants": 219,
+  "features": 49,
+  "templates": {
+    "WoZ": {
+      "segments": 275,
+      "mean_pitch": 39.29120965454545
+    },
+    "AI": {
+      "segments": 347,
+      "mean_pitch": 39.192805374639754
+    }
+  },
+  "separated_sessions": 219,
+  "interviewer_segment_fraction_percentiles": {
+    "p10": 0.007211256595661521,
+    "p50": 0.03597122302158273,
+    "p90": 0.11909774436090226,
+    "max": 0.3345323741007194
+  },
+  "sessions_over_5_percent_interviewer": 87,
+  "proxy_agreement": {
+    "AI_long_unique": {
+      "rows": 944,
+      "agreement": 0.9830508474576272
+    },
+    "AI_scripted_prompt": {
+      "rows": 14,
+      "agreement": 0.5
+    },
+    "WoZ_long_unique": {
+      "rows": 6885,
+      "agreement": 0.9921568627450981
+    },
+    "WoZ_scripted_prompt": {
+      "rows": 62,
+      "agreement": 0.12903225806451613
+    }
+  }
+}

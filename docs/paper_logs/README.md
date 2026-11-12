@@ -1,5 +1,123 @@
 # Paper-writer experiment log
 
+## Latest: participant speech, pooled cohort, text-assisted fusion and abstention (2026-11-12)
+
+Files: `participant_pooled/`. This run followed the three runs described in the next section. Same repeated nested cross-validation, labels unchanged, test split not read.
+
+Run: `participant_pooled_20261112T071357784484Z`. Protocol frozen before fitting, with label-free pre-fit observations: `docs/methods/participant_pooled.md`.
+
+**Decision: no candidate passes the screen; `original_concat` stays the retained control.** The best audio/face result so far is `segment_concat`: 65.22% accuracy, 59.40% balanced accuracy, 39.13% F1 and fold AUC 0.631. That is +1.97 F1 points over the control with every metric higher, but below the +3-point screen.
+
+#### T161 (same 161 participants and folds as earlier runs)
+
+| Policy | Accuracy | Balanced accuracy | Precision | Recall | F1 ± SD | AUC | AP |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| original_concat | 62.94 | 57.61 | 30.42 | 47.75 | 37.16 ± 4.02 | 0.600 | 0.401 |
+| voiced_concat | 63.56 | 57.38 | 30.51 | 45.95 | 36.66 ± 2.66 | 0.625 | 0.431 |
+| segment_concat | 65.22 | 59.40 | 32.73 | 48.65 | 39.13 ± 0.35 | 0.631 | 0.405 |
+| participant_concat | 64.80 | 58.82 | 32.14 | 47.75 | 38.42 ± 1.33 | 0.619 | 0.383 |
+| original_concat_nopose | 61.08 | 54.82 | 27.74 | 43.24 | 33.78 ± 0.87 | 0.562 | 0.369 |
+| participant_concat_nopose | 63.98 | 57.65 | 30.91 | 45.95 | 36.96 ± 1.77 | 0.579 | 0.353 |
+| original_audio | 57.14 | 52.58 | 25.42 | 44.14 | 32.24 ± 5.22 | 0.571 | 0.335 |
+| voiced_audio | 59.42 | 54.06 | 26.69 | 44.14 | 33.23 ± 3.86 | 0.576 | 0.329 |
+| segment_audio | 62.11 | 57.07 | 29.68 | 47.75 | 36.57 ± 2.93 | 0.598 | 0.357 |
+| participant_audio | 60.87 | 55.63 | 28.18 | 45.95 | 34.87 ± 4.36 | 0.572 | 0.333 |
+| face | 60.25 | 55.55 | 28.19 | 46.85 | 35.13 ± 1.45 | 0.580 | 0.343 |
+| text | 74.74 | 74.44 | 47.31 | 73.87 | 57.52 ± 5.03 | 0.805 | 0.607 |
+| text_av_equal | 73.91 | 69.16 | 45.00 | 60.36 | 51.55 ± 2.16 | 0.784 | 0.569 |
+| text_av_weighted | 74.33 | 72.59 | 46.24 | 69.37 | 55.43 ± 4.25 | 0.822 | 0.599 |
+| always_positive | 22.98 | 50.00 | 22.98 | 100.00 | 37.37 ± 0.00 | 0.500 | 0.230 |
+| always_negative | 77.02 | 50.00 | 0.00 | 0.00 | 0.00 ± 0.00 | 0.500 | 0.230 |
+
+#### P217 (161 training + 56 development participants, folds rebuilt)
+
+| Policy | Accuracy | Balanced accuracy | Precision | Recall | F1 ± SD | AUC | AP |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| original_concat_p217 | 59.91 | 52.66 | 25.18 | 39.46 | 30.69 ± 1.73 | 0.529 | 0.339 |
+| segment_concat_p217 | 60.52 | 53.78 | 26.34 | 41.50 | 32.20 ± 0.42 | 0.570 | 0.347 |
+| participant_concat_p217 | 59.75 | 53.29 | 25.89 | 41.50 | 31.83 ± 1.01 | 0.553 | 0.343 |
+| original_audio_p217 | 53.76 | 51.35 | 23.63 | 46.94 | 31.44 ± 1.12 | 0.557 | 0.324 |
+| segment_audio_p217 | 58.99 | 55.92 | 27.63 | 50.34 | 35.65 ± 0.58 | 0.583 | 0.337 |
+| participant_audio_p217 | 55.30 | 52.58 | 24.66 | 47.62 | 32.48 ± 0.10 | 0.551 | 0.311 |
+| face_p217 | 56.84 | 51.88 | 24.34 | 42.86 | 30.97 ± 3.07 | 0.501 | 0.282 |
+| always_positive_p217 | 22.58 | 50.00 | 22.58 | 100.00 | 36.84 ± 0.00 | 0.500 | 0.226 |
+
+#### Screens
+
+| Candidate | Control | F1 change | BA change | AUC change | Recall change | Positive repeats | Pass |
+|---|---|---:|---:|---:|---:|---:|---|
+| participant_concat | original_concat | +1.26 | +1.21 | +1.87 | +0.00 | 2/3 | False |
+| segment_concat | original_concat | +1.97 | +1.79 | +3.07 | +0.90 | 2/3 | False |
+| original_concat_nopose | original_concat | -3.38 | -2.79 | -3.77 | -4.50 | 1/3 | False |
+| participant_concat_nopose | original_concat | -0.20 | +0.04 | -2.11 | -1.80 | 1/3 | False |
+| participant_audio | segment_audio | -1.70 | -1.44 | -2.56 | -1.80 | 1/3 | False |
+| participant_concat | segment_concat | -0.72 | -0.58 | -1.21 | -0.90 | 1/3 | False |
+| participant_concat_nopose | participant_concat | -1.46 | -1.17 | -3.97 | -1.80 | 0/3 | False |
+| text_av_equal | text | -5.98 | -5.28 | -2.18 | -13.51 | 0/3 | False |
+| text_av_weighted | text | -2.10 | -1.85 | +1.63 | -4.50 | 0/3 | False |
+| participant_concat_p217 | original_concat_p217 | +1.14 | +0.62 | +2.42 | +2.04 | 2/3 | False |
+| segment_concat_p217 | original_concat_p217 | +1.51 | +1.12 | +4.06 | +2.04 | 2/3 | False |
+
+Changes are in percentage points (AUC x100).
+
+#### Does more training data help the original 161?
+
+| Policy (trained on 217, scored on the 161) | Accuracy | Balanced accuracy | Recall | F1 | F1 when trained on 161 |
+|---|---:|---:|---:|---:|---:|
+| original_concat | 61.49 | 54.77 | 42.34 | 33.64 | 37.16 |
+| segment_concat | 61.90 | 55.67 | 44.14 | 34.76 | 39.13 |
+| participant_concat | 61.49 | 55.41 | 44.14 | 34.58 | 38.42 |
+| original_audio | 54.66 | 52.23 | 47.75 | 32.61 | 32.24 |
+| segment_audio | 60.25 | 57.44 | 52.25 | 37.65 | 36.57 |
+| participant_audio | 55.90 | 54.30 | 51.35 | 34.83 | 34.87 |
+| face | 56.73 | 52.00 | 43.24 | 31.45 | 35.13 |
+
+#### Abstention (descriptive)
+
+| Model | Subset | People | Positives | Accuracy | Balanced accuracy | F1 |
+|---|---|---:|---:|---:|---:|---:|
+| original_concat | most confident 100% | 161 | 37.0 | 62.9 | 57.6 | 37.2 |
+| original_concat | most confident 80% | 129 | 32.0 | 65.4 | 58.9 | 39.6 |
+| original_concat | most confident 60% | 97 | 26.3 | 67.7 | 61.2 | 44.0 |
+| original_concat | most confident 40% | 64 | 18.3 | 70.8 | 63.7 | 47.9 |
+| participant_concat | most confident 100% | 161 | 37.0 | 64.8 | 58.8 | 38.4 |
+| participant_concat | most confident 80% | 129 | 30.0 | 68.2 | 61.5 | 41.7 |
+| participant_concat | most confident 60% | 97 | 20.7 | 71.1 | 63.4 | 42.6 |
+| participant_concat | most confident 40% | 64 | 12.7 | 74.0 | 63.8 | 41.2 |
+| text | most confident 100% | 161 | 37.0 | 74.7 | 74.4 | 57.5 |
+| text | most confident 80% | 129 | 28.3 | 78.8 | 78.4 | 61.8 |
+| text | most confident 60% | 97 | 20.3 | 79.4 | 76.9 | 59.6 |
+| text | most confident 40% | 64 | 12.7 | 84.9 | 81.6 | 66.9 |
+| text_av_weighted | most confident 100% | 161 | 37.0 | 74.3 | 72.6 | 55.4 |
+| text_av_weighted | most confident 80% | 129 | 26.0 | 80.4 | 78.7 | 61.0 |
+| text_av_weighted | most confident 60% | 97 | 17.0 | 84.9 | 83.8 | 65.5 |
+| text_av_weighted | most confident 40% | 64 | 10.7 | 90.1 | 89.3 | 74.7 |
+| original_concat | not quality-flagged | 82 | 15.0 | 64.2 | 53.1 | 26.5 |
+| original_concat | quality-flagged | 79 | 22.0 | 61.6 | 59.9 | 44.9 |
+
+#### Findings
+
+- **Interviewer speech is mostly absent from the voiced descriptors.** In 90% of 164 unambiguous scripted-prompt transcript rows, the supplied descriptors contain no voiced segment. Removing estimated interviewer segments (a median 3.6% of segments) did not help: `participant_concat` is 0.72 F1 points below the matched `segment_concat`. Separation accuracy for higher-pitched participants is unverified.
+- **Segment-based voiced summaries are the best audio representation so far.** `segment_audio` uses voiced frames inside segments of at least 0.2 s, plus voiced fraction, segment rate and segment length. Alone it reached 36.57% F1 and AUC 0.598, against 32.24% and 0.571 for the original audio.
+- **Head-translation features should stay.** Dropping the six `pose_T*` summaries lowered F1 by 1.5 to 3.4 points.
+- **Adding development participants hurt.** Every P217 policy scored lower than its T161 counterpart, also when scored only on the original 161 (for example `original_concat` 33.64% vs 37.16% F1). Either the cohorts differ or the T161 estimate is optimistic; in both cases the earlier 37% is not a stable figure. Development facial timing was not anomaly-checked.
+- **Text-assisted fusion did not beat text alone on F1** (55.43% vs 57.52%), although mean fold AUC rose from 0.805 to 0.822. The inner selection chose text weight .75 in all 15 folds.
+- **Confidence is informative.** On the most confident 40% of participants, `text_av_weighted` reached 90.1% accuracy and 74.7% F1. Text alone reached 84.9% and 66.9%, and `original_concat` 70.8% and 47.9%. The cut-offs use held-out scores, so this is descriptive and not a deployable rule.
+- **The fixed quality flags do not mark unreliable predictions.** Flagged participants had higher F1 (44.9%) than unflagged ones (26.5%), with similar accuracy.
+
+#### Verification
+
+- 285 branch models restored and refitted; 13,587 predictions with zero restored-score error.
+- 30 text-assisted fusions recomputed element by element; metrics, screens and abstention tables recomputed.
+- The historical `original_concat` scores and the retained text reference were both reproduced exactly.
+- All 135 tests pass. The test split was not read.
+- Development participants were pooled into cross-validation, so this run is marked `development_evaluated: true`.
+
+This is an exploratory result on a reused cohort.
+
+
+---
+
 ## Start here: follow-up studies after code review — 2026-11-08
 
 This log covers three runs on the same E-DAIC training cohort: 161 retained participants, 37 positive released labels, 143 WoZ and 18 AI interviews. All three use the same repeated nested cross-validation:

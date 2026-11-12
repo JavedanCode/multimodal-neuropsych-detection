@@ -20,6 +20,10 @@ def bootstrap_weights(y, domains, draws=2000, seed=20261104):
 def sampled_metrics(y, prediction, weights):
     y = np.asarray(y)[:, None]
     p = np.asarray(prediction)
+    if p.ndim == 1:
+        p = p[:, None]
+    if p.ndim != 2 or p.shape[0] != len(y):
+        raise ValueError("Predictions must be (participants,) or (participants, repeats)")
     tp = weights @ ((y == 1) & (p == 1))
     fp = weights @ ((y == 0) & (p == 1))
     fn = weights @ ((y == 1) & (p == 0))

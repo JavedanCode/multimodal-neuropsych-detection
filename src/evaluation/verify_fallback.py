@@ -132,7 +132,7 @@ def verify(project, out):
                     set(target.index[ib]) | set(held.index),
                 )
             check_crossfit(audit["outer_crossfit"], target.index, set(held.index))
-            for old, new in zip(audit["candidates"], again["candidates"]):
+            for old, new in zip(audit["candidates"], again["candidates"], strict=True):
                 np.testing.assert_allclose(old["scores"], new["scores"], atol=1e-12)
                 assert (
                     old["routes"] == new["routes"]

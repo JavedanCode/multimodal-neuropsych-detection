@@ -35,6 +35,10 @@ def verify(project, out):
         from src.evaluation.verify_sparse_fusion import verify as verify_sparse
 
         return verify_sparse(project, out)
+    if manifest.get("study") == "participant_pooled":
+        from src.evaluation.verify_pooled_study import verify as verify_pooled
+
+        return verify_pooled(project, out)
     if manifest.get("study") == "score_functionals_domain":
         from src.evaluation.verify_score_study import verify as verify_score
 
@@ -70,7 +74,7 @@ def verify(project, out):
             )
             for name in NAMES:
                 for old, new in zip(
-                    audit["candidates"][name], again["candidates"][name]
+                    audit["candidates"][name], again["candidates"][name], strict=True
                 ):
                     np.testing.assert_allclose(old["scores"], new["scores"], atol=1e-10)
                     assert old["inner_f1"] == new["inner_f1"]

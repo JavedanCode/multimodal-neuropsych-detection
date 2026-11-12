@@ -42,6 +42,11 @@ def main(argv=None):
         action="store_true",
         help="Run the PHQ-score / eGeMAPS functionals / domain scaling study (audio-visual only)",
     )
+    run.add_argument(
+        "--pooled-study",
+        action="store_true",
+        help="Run the participant-speech / pooled train+dev / text-assisted study (audio-visual only)",
+    )
     verify = commands.add_parser("verify", help="Check a saved study's artifacts")
     verify.add_argument("study", choices=STUDIES)
     verify.add_argument("--run", type=Path, required=True)
@@ -56,6 +61,11 @@ def main(argv=None):
             parser.error(
                 "--sparse-fusion requires audio-visual and cannot combine with --preprocess-audio"
             )
+    if args.command == "run" and args.pooled_study:
+        if args.study != "audio-visual" or (
+            args.preprocess_audio or args.sparse_fusion or args.corrected or args.score_study
+        ):
+            parser.error("--pooled-study requires audio-visual and runs on its own")
     if args.command == "run" and args.score_study:
         if args.study != "audio-visual" or (
             args.preprocess_audio or args.sparse_fusion or args.corrected
@@ -76,6 +86,8 @@ def main(argv=None):
             print(json.dumps(module.verify(project, args.run.resolve()), indent=2))
         elif args.preprocess_audio:
             print(module.run(project, preprocessing=True))
+        elif args.pooled_study:
+            print(module.run(project, pooled_study=True))
         elif args.score_study:
             print(module.run(project, score_study=True))
         elif args.corrected:

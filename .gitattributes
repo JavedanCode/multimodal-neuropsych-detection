@@ -1,0 +1,6 @@
+# Keep source and docs LF in the working tree so recorded file hashes are stable.
+*.py text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf

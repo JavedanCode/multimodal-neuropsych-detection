@@ -1,0 +1,9 @@
+{
+  "branch_models_restored_and_refitted": 285,
+  "prediction_rows": 13587,
+  "text_av_fusions_recomputed": 30,
+  "maximum_restored_score_error": 0.0,
+  "metrics_comparisons_abstention_recomputed": true,
+  "historical_concat_and_text_reference_reproduced": true,
+  "test_evaluated": false
+}

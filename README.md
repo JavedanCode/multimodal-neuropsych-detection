@@ -96,6 +96,17 @@ series is finished: keep the original control. The
 .venv\Scripts\python.exe -m src run audio-visual --score-study
 ```
 
+A further run ([protocol](docs/methods/participant_pooled.md)) tested label-free
+removal of interviewer speech, pooling the development participants into
+cross-validation, text-assisted fusion and abstention. Segment-based voiced audio +
+face is the best audio/face result so far (**65.2% accuracy, 39.1% F1**, AUC 0.631)
+but does not pass the screen; pooling development participants lowered scores.
+
+```powershell
+.venv\Scripts\python.exe -c "from pathlib import Path; from src.dataset.participant_speech import build; build(Path('.').resolve())"
+.venv\Scripts\python.exe -m src run audio-visual --pooled-study
+```
+
 Use PowerShell from this folder. The existing `.venv` contains the local setup.
 For a new environment, install with `python -m pip install -e '.[dev,neural,speech]'`.
 The authorized dataset and cached encoders must be provided locally; E-DAIC is not
