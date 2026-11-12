@@ -39,6 +39,8 @@ RESULT_COMMITS = (
     "04df0840d3ef35b69c945d42f29c0794c8407324",
     # score_functionals_domain run.
     "83b3e9c68075860e78c5122cee502cd7d1f6f1d2",
+    # stacked_fusion run.
+    "2918c700e375fa9f2961bf179228cca59f4264cf",
     # participant_pooled run.
     "d781fdd23d402cdad0d8ea0baf6242db78b1d907",
 )
