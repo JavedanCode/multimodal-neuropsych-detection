@@ -107,6 +107,15 @@ but does not pass the screen; pooling development participants lowered scores.
 .venv\Scripts\python.exe -m src run audio-visual --pooled-study
 ```
 
+The stacked fusion run ([protocol](docs/methods/stacked_fusion.md)) combines the text
+model with the voice + face model through a learned combiner and evaluates three fold
+schemes. Under the existing folds it reaches **72.9% accuracy, 57.7% F1** (text: 74.7%,
+57.5%); under 10-fold it reaches 59.5% F1 and passes the screen against text.
+
+```powershell
+.venv\Scripts\python.exe -m src run audio-visual --stacked-study
+```
+
 Use PowerShell from this folder. The existing `.venv` contains the local setup.
 For a new environment, install with `python -m pip install -e '.[dev,neural,speech]'`.
 The authorized dataset and cached encoders must be provided locally; E-DAIC is not

@@ -35,6 +35,10 @@ def verify(project, out):
         from src.evaluation.verify_sparse_fusion import verify as verify_sparse
 
         return verify_sparse(project, out)
+    if manifest.get("study") == "stacked_fusion":
+        from src.evaluation.verify_stacked_study import verify as verify_stacked
+
+        return verify_stacked(project, out)
     if manifest.get("study") == "participant_pooled":
         from src.evaluation.verify_pooled_study import verify as verify_pooled
 

@@ -1,0 +1,67 @@
+﻿.venv\Scripts\python.exe : Stacked fusion scheme A seed 42 fold 0
+At line:1 char:302
++ ... tch {} } }; .venv\Scripts\python.exe -m src run audio-visual --stacke ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Stacked fusion scheme A seed 42 fold 0:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Stacked fusion scheme A seed 42 fold 1
+Stacked fusion scheme A seed 42 fold 2
+Stacked fusion scheme A seed 42 fold 3
+Stacked fusion scheme A seed 42 fold 4
+Stacked fusion scheme A seed 137 fold 0
+Stacked fusion scheme A seed 137 fold 1
+Stacked fusion scheme A seed 137 fold 2
+Stacked fusion scheme A seed 137 fold 3
+Stacked fusion scheme A seed 137 fold 4
+Stacked fusion scheme A seed 2026 fold 0
+Stacked fusion scheme A seed 2026 fold 1
+Stacked fusion scheme A seed 2026 fold 2
+Stacked fusion scheme A seed 2026 fold 3
+Stacked fusion scheme A seed 2026 fold 4
+Stacked fusion scheme B seed 42 fold 0
+Stacked fusion scheme B seed 42 fold 1
+Stacked fusion scheme B seed 42 fold 2
+Stacked fusion scheme B seed 42 fold 3
+Stacked fusion scheme B seed 42 fold 4
+Stacked fusion scheme B seed 137 fold 0
+Stacked fusion scheme B seed 137 fold 1
+Stacked fusion scheme B seed 137 fold 2
+Stacked fusion scheme B seed 137 fold 3
+Stacked fusion scheme B seed 137 fold 4
+Stacked fusion scheme B seed 2026 fold 0
+Stacked fusion scheme B seed 2026 fold 1
+Stacked fusion scheme B seed 2026 fold 2
+Stacked fusion scheme B seed 2026 fold 3
+Stacked fusion scheme B seed 2026 fold 4
+Stacked fusion scheme C seed 42 fold 0
+Stacked fusion scheme C seed 42 fold 1
+Stacked fusion scheme C seed 42 fold 2
+Stacked fusion scheme C seed 42 fold 3
+Stacked fusion scheme C seed 42 fold 4
+Stacked fusion scheme C seed 42 fold 5
+Stacked fusion scheme C seed 42 fold 6
+Stacked fusion scheme C seed 42 fold 7
+Stacked fusion scheme C seed 42 fold 8
+Stacked fusion scheme C seed 42 fold 9
+Stacked fusion scheme C seed 137 fold 0
+Stacked fusion scheme C seed 137 fold 1
+Stacked fusion scheme C seed 137 fold 2
+Stacked fusion scheme C seed 137 fold 3
+Stacked fusion scheme C seed 137 fold 4
+Stacked fusion scheme C seed 137 fold 5
+Stacked fusion scheme C seed 137 fold 6
+Stacked fusion scheme C seed 137 fold 7
+Stacked fusion scheme C seed 137 fold 8
+Stacked fusion scheme C seed 137 fold 9
+Stacked fusion scheme C seed 2026 fold 0
+Stacked fusion scheme C seed 2026 fold 1
+Stacked fusion scheme C seed 2026 fold 2
+Stacked fusion scheme C seed 2026 fold 3
+Stacked fusion scheme C seed 2026 fold 4
+Stacked fusion scheme C seed 2026 fold 5
+Stacked fusion scheme C seed 2026 fold 6
+Stacked fusion scheme C seed 2026 fold 7
+Stacked fusion scheme C seed 2026 fold 8
+Stacked fusion scheme C seed 2026 fold 9
+<project>\experiments\runs\stacked_fusion_20261112T073832688696Z

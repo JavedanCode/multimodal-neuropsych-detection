@@ -2641,3 +2641,93 @@ Changes are in percentage points (AUC x100).
 
 This is an exploratory result on a reused cohort.
 
+
+
+---
+
+## Stacked text + voice + face fusion under three fold schemes — 2026-11-12
+
+Run: `stacked_fusion_20261112T073832688696Z`. Protocol frozen before fitting: `docs/methods/stacked_fusion.md`. Cohort: the 161 training participants; no development or test data.
+
+**Result: `stack2` (text combined with the voice + face model through a learned combiner) is the best fusion model.** Under the existing folds (scheme A) it matches the text model on F1 (57.74% vs 57.52%) with higher recall and balanced accuracy but lower accuracy, and it does not pass the screen. Under 10-fold (scheme C) it reaches 59.51% F1 and passes the screen against text on the same folds. Scheme A stays the primary scheme.
+
+### All schemes
+
+| Scheme | Model | Accuracy | Balanced accuracy | Precision | Recall | F1 ± SD | AUC | AP |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| A: 5-fold (existing) | Text | 74.74 | 74.44 | 47.31 | 73.87 | 57.52 ± 5.03 | 0.805 | 0.607 |
+| A: 5-fold (existing) | stack2 (text + voice/face) | 72.88 | 75.44 | 45.15 | 80.18 | 57.74 ± 6.16 | 0.809 | 0.585 |
+| A: 5-fold (existing) | stack3 (text + voice + face) | 71.43 | 72.29 | 43.12 | 73.87 | 54.42 ± 4.96 | 0.797 | 0.575 |
+| A: 5-fold (existing) | gate3 (stack3 with confidence gate) | 71.84 | 72.56 | 43.61 | 73.87 | 54.81 ± 4.29 | 0.795 | 0.580 |
+| A: 5-fold (existing) | Voice + face | 65.22 | 59.40 | 32.73 | 48.65 | 39.13 ± 0.35 | 0.631 | 0.405 |
+| A: 5-fold (existing) | Always positive | 22.98 | 50.00 | 22.98 | 100.00 | 37.37 ± 0.00 | 0.500 | 0.230 |
+| B: 5-fold, gender-balanced | Text | 76.40 | 75.51 | 49.14 | 73.87 | 58.95 ± 1.20 | 0.822 | 0.586 |
+| B: 5-fold, gender-balanced | stack2 (text + voice/face) | 73.29 | 76.02 | 45.51 | 81.08 | 58.29 ± 5.22 | 0.809 | 0.552 |
+| B: 5-fold, gender-balanced | stack3 (text + voice + face) | 70.19 | 71.16 | 41.56 | 72.97 | 52.95 ± 2.88 | 0.783 | 0.525 |
+| B: 5-fold, gender-balanced | gate3 (stack3 with confidence gate) | 72.05 | 73.32 | 43.77 | 75.68 | 55.46 ± 1.87 | 0.806 | 0.557 |
+| B: 5-fold, gender-balanced | Voice + face | 64.39 | 59.18 | 32.21 | 49.55 | 39.03 ± 2.91 | 0.634 | 0.418 |
+| B: 5-fold, gender-balanced | Always positive | 22.98 | 50.00 | 22.98 | 100.00 | 37.37 ± 0.00 | 0.500 | 0.230 |
+| C: 10-fold | Text | 74.95 | 73.31 | 47.00 | 70.27 | 56.31 ± 0.55 | 0.811 | 0.633 |
+| C: 10-fold | stack2 (text + voice/face) | 75.78 | 76.37 | 48.32 | 77.48 | 59.51 ± 1.43 | 0.817 | 0.613 |
+| C: 10-fold | stack3 (text + voice + face) | 73.71 | 74.40 | 45.71 | 75.68 | 56.98 ± 3.30 | 0.796 | 0.592 |
+| C: 10-fold | gate3 (stack3 with confidence gate) | 73.71 | 74.08 | 45.70 | 74.77 | 56.70 ± 3.02 | 0.800 | 0.610 |
+| C: 10-fold | Voice + face | 67.08 | 61.25 | 35.00 | 50.45 | 41.33 ± 0.96 | 0.650 | 0.463 |
+| C: 10-fold | Always positive | 22.98 | 50.00 | 22.98 | 100.00 | 37.37 ± 0.00 | 0.500 | 0.230 |
+
+Classification metrics are means of three repeat-level pooled out-of-fold values (± SD across repeats). AUC and AP are means over held-out folds.
+
+### Fusion against text on the same folds
+
+| Candidate | Control | F1 change | BA change | AUC change | Recall change | Positive repeats | Pass | Bootstrap F1 change (95%) | Share > 0 |
+|---|---|---:|---:|---:|---:|---:|---|---:|---:|
+| stack3_A | text_A | -3.10 | -2.15 | -0.89 | +0.00 | 0/3 | False | -7.2 to +1.2 | 0.07 |
+| stack2_A | text_A | +0.22 | +1.00 | +0.37 | +6.31 | 2/3 | False | -3.8 to +5.0 | 0.54 |
+| gate3_A | text_A | -2.72 | -1.88 | -1.00 | +0.00 | 0/3 | False | -6.2 to +0.8 | 0.06 |
+| stack3_B | text_B | -5.99 | -4.35 | -3.87 | -0.90 | 0/3 | False | -10.3 to -2.3 | 0.00 |
+| stack2_B | text_B | -0.65 | +0.51 | -1.27 | +7.21 | 2/3 | False | -5.5 to +4.4 | 0.41 |
+| gate3_B | text_B | -3.49 | -2.19 | -1.61 | +1.80 | 0/3 | False | -6.5 to -0.3 | 0.01 |
+| stack3_C | text_C | +0.67 | +1.09 | -1.51 | +5.41 | 2/3 | False | -4.3 to +5.9 | 0.61 |
+| stack2_C | text_C | +3.20 | +3.07 | +0.58 | +7.21 | 3/3 | True | -1.5 to +8.5 | 0.91 |
+| gate3_C | text_C | +0.39 | +0.77 | -1.17 | +4.50 | 2/3 | False | -4.6 to +5.6 | 0.56 |
+
+Changes are in percentage points (AUC x100). The bootstrap is a paired, label-stratified participant bootstrap with 2,000 resamples.
+
+### Abstention under scheme A (descriptive)
+
+| Model (scheme A) | Most confident | Accuracy | Balanced accuracy | F1 |
+|---|---|---:|---:|---:|
+| text | 100% | 74.7 | 74.4 | 57.5 |
+| text | 80% | 78.8 | 78.4 | 61.8 |
+| text | 60% | 79.4 | 76.9 | 59.6 |
+| text | 40% | 84.9 | 81.6 | 66.9 |
+| stack2 | 100% | 72.9 | 75.4 | 57.7 |
+| stack2 | 80% | 76.2 | 78.5 | 59.8 |
+| stack2 | 60% | 79.4 | 82.5 | 64.4 |
+| stack2 | 40% | 81.8 | 85.0 | 67.9 |
+| stack3 | 100% | 71.4 | 72.3 | 54.4 |
+| stack3 | 80% | 75.5 | 76.8 | 59.0 |
+| stack3 | 60% | 78.7 | 81.8 | 63.0 |
+| stack3 | 40% | 80.2 | 83.5 | 62.7 |
+| gate3 | 100% | 71.8 | 72.6 | 54.8 |
+| gate3 | 80% | 75.2 | 76.0 | 58.5 |
+| gate3 | 60% | 76.3 | 79.0 | 62.4 |
+| gate3 | 40% | 79.7 | 82.8 | 65.8 |
+
+### Findings
+
+- **The learned combiner fixed the decision-point problem.** The earlier fixed-weight text + audio/face fusion scored 55.43% F1 under scheme A. `stack2` scores 57.74%, with recall 80.18% (text: 73.87%) and balanced accuracy 75.44% (text: 74.44%). Accuracy is lower (72.88% vs 74.74%) because it predicts more positives.
+- **Two inputs beat three.** `stack3` (separate voice and face inputs) and `gate3` were below text under schemes A and B. The combiner gives voice and face small weights (about 0.1–0.3 against 1.3–1.4 for text).
+- **Fold scheme matters as much as the model.** Text alone scores 57.52%, 58.95% and 56.31% F1 under schemes A, B and C. That spread (2.6 points) is as large as most model differences in this project.
+- **10-fold is the most favourable scheme for fusion.** `stack2` passes the screen only under scheme C (+3.20 F1, 3/3 repeats). Its bootstrap interval is −1.5 to +8.5 points, with 91% of resamples above zero. Because scheme C was picked from three schemes after seeing results, its 59.51% is optimistic; scheme A's 57.74% is the comparable figure.
+- **Gender-balanced folds did not help fusion.** Scheme B made folds more uniform in gender (SD of female share 0.023 against 0.069) and gave the highest text score, but fusion was below text.
+- **Abstention.** On the most confident 60% of participants, `stack2` reaches 82.5% balanced accuracy and 64.4% F1 (text: 76.9% and 59.6%).
+
+### Verification
+
+- 60 fold bundles restored and refitted; 10,143 predictions with zero restored-score error.
+- Combiners and the confidence gate recomputed element by element from the saved parts.
+- Under scheme A, the retained text reference and the earlier `segment_concat` model were both reproduced exactly.
+- Every participant is held out exactly once per repeat in every scheme. All tests pass.
+
+This is an exploratory result on a reused cohort.
+

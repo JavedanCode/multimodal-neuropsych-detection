@@ -147,7 +147,12 @@ def run(
     corrected=False,
     score_study=False,
     pooled_study=False,
+    stacked_study=False,
 ):
+    if stacked_study:
+        from src.training.stacked_study import run as run_stacked
+
+        return run_stacked(project)
     if pooled_study:
         from src.training.pooled_study import run as run_pooled
 

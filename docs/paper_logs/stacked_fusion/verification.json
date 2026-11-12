@@ -1,0 +1,12 @@
+{
+  "fold_bundles_restored_and_refitted": 60,
+  "prediction_rows": 10143,
+  "maximum_restored_score_error": 0.0,
+  "combiners_and_gate_recomputed": true,
+  "text_reference_and_segment_concat_reproduced_in_scheme_A": true,
+  "female_share_sd_across_folds": {
+    "A": 0.06855362986997968,
+    "B": 0.02265473131227885
+  },
+  "test_evaluated": false
+}
